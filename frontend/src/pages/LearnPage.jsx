@@ -207,17 +207,91 @@ export default function LearnPage() {
           </div>
         </section>
 
+        {/* Extensions (Section 5 of Methodology) */}
+        <section className="mb-16">
+          <h2 className="font-heading text-2xl font-bold mb-6 flex items-center gap-2">
+            <span className="text-neon-purple font-mono">⁹</span>
+            Extensions & Tensions (Section 5)
+          </h2>
+          <p className="text-slate-400 mb-6">
+            Extensions <strong className="text-slate-200">do not introduce new numbers</strong>. They are written as 
+            superscripts to show upper-structure color. You still think in 2, 4, 6 relative to the scale.
+          </p>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {EXTENSIONS.map((item, idx) => (
+              <Card key={idx} className="bg-slate-900/50 border-slate-800 border-neon-purple/30">
+                <CardContent className="pt-6">
+                  <div className="font-mono text-3xl text-neon-purple mb-2">{item.symbol}</div>
+                  <div className="text-sm text-slate-300 mb-1">{item.meaning}</div>
+                  <div className="text-xs text-slate-500">{item.example}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <p className="text-xs text-slate-500 mt-4">
+            Example: 2⁹ means "2 functioning as the 9th of the chord (extension tension)"
+          </p>
+        </section>
+
+        {/* Inversions (Section 7 of Methodology) */}
+        <section className="mb-16">
+          <h2 className="font-heading text-2xl font-bold mb-6 flex items-center gap-2">
+            <Slash className="w-6 h-6 text-neon-cyan" />
+            Inversions & Slash Rule (Section 7)
+          </h2>
+          <p className="text-slate-400 mb-6">
+            Slash notation is: <strong className="text-neon-cyan">BASS FIRST, CHORD SECOND</strong>. 
+            The format X/Y means X in the bass with a Y-chord above.
+          </p>
+          <div className="grid sm:grid-cols-3 gap-4 mb-6">
+            <Card className="bg-slate-900/50 border-slate-800">
+              <CardContent className="pt-6">
+                <div className="font-mono text-2xl text-neon-cyan mb-2">1/3</div>
+                <div className="text-sm text-slate-300">1 in the bass, 3-chord above</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-slate-900/50 border-slate-800">
+              <CardContent className="pt-6">
+                <div className="font-mono text-2xl text-neon-cyan mb-2">1/5</div>
+                <div className="text-sm text-slate-300">1 in the bass, 5-chord above</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-slate-900/50 border-slate-800">
+              <CardContent className="pt-6">
+                <div className="font-mono text-2xl text-neon-cyan mb-2">1/7</div>
+                <div className="text-sm text-slate-300">1 in the bass, 7-chord above</div>
+              </CardContent>
+            </Card>
+          </div>
+          <Card className="bg-slate-800/30 border-slate-700">
+            <CardContent className="pt-4">
+              <p className="text-sm text-slate-400">
+                <strong className="text-slate-200">Optional Teaching Markers:</strong> Superscripts ² and ³ describe 
+                the voicing of the chord (second/third inversion), not the bass function.
+              </p>
+              <p className="text-xs text-slate-500 mt-2">
+                Example: 1/3² = 1 in the bass, 3-chord in second inversion
+              </p>
+            </CardContent>
+          </Card>
+        </section>
+
         {/* Symbols Quick Reference */}
         <section className="mb-16">
           <h2 className="font-heading text-2xl font-bold mb-6">Symbol Quick Reference</h2>
           <Card className="bg-slate-900/50 border-slate-800">
             <CardContent className="pt-6">
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div>
-                  <div className="font-mono text-lg text-neon-cyan mb-1">m</div>
-                  <div className="text-sm text-slate-400">Minor chord (1m = minor)</div>
-                </div>
-                <div>
+                {SYMBOL_LEGEND.map((item, idx) => (
+                  <div key={idx}>
+                    <div className={`font-mono text-lg text-${item.color} mb-1`}>{item.symbol}</div>
+                    <div className="text-sm text-slate-400">{item.meaning}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
                   <div className="font-mono text-lg text-neon-indigo mb-1">M</div>
                   <div className="text-sm text-slate-400">Non-diatonic major</div>
                 </div>
