@@ -392,6 +392,82 @@ async def login_email(req: EmailLoginRequest, response: Response):
     
     # Remove password_hash from response
     user_doc.pop("password_hash", None)
+    # Add computed fields
+    user_doc["computed_avatar"] = get_display_avatar(user_doc)
+    user_doc["display_name"] = get_display_name(user_doc)
+    return user_doc
+
+@api_router.put("/auth/profile")
+async def update_profile(req: UpdateProfileRequest, user: User = Depends(get_current_user)):
+    """Update user profile (username, name)"""
+    update_data = {}
+    
+    if req.username is not None:
+        # Prevent non-founders from using "Motesart" username
+        if req.username.lower() == "motesart" and not user.is_founder:
+            raise HTTPException(status_code=400, detail="This username is reserved")
+        update_data["username"] = req.username
+    
+    if req.name is not None:
+        update_data["name"] = req.name
+    
+    if update_data:
+        await db.users.update_one(
+            {"user_id": user.user_id},
+            {"$set": update_data}
+        )
+    
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0, "password_hash": 0})
+    user_doc["computed_avatar"] = get_display_avatar(user_doc)
+    user_doc["display_name"] = get_display_name(user_doc)
+    return user_doc
+
+@api_router.post("/auth/avatar")
+async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_current_user)):
+    """Upload a custom avatar image"""
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:  # 5MB limit
+        raise HTTPException(status_code=400, detail="Image must be less than 5MB")
+    
+    import base64
+    # Store as base64 data URL for simplicity
+    # In production, you'd upload to S3/cloud storage
+    extension = file.filename.split(".")[-1].lower() if file.filename else "png"
+    content_type = f"image/{extension}" if extension in ["png", "jpg", "jpeg", "gif", "webp"] else "image/png"
+    avatar_data_url = f"data:{content_type};base64,{base64.b64encode(content).decode()}"
+    
+    await db.users.update_one(
+        {"user_id": user.user_id},
+        {"$set": {"avatar_url": avatar_data_url}}
+    )
+    
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0, "password_hash": 0})
+    user_doc["computed_avatar"] = get_display_avatar(user_doc)
+    user_doc["display_name"] = get_display_name(user_doc)
+    return user_doc
+
+@api_router.delete("/auth/avatar")
+async def delete_avatar(user: User = Depends(get_current_user)):
+    """Remove custom avatar and revert to default"""
+    # Generate a new default avatar
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0})
+    default_avatar = generate_avatar_url(user_doc.get("name", "User"), user.user_id)
+    
+    # Don't allow founder to delete their special avatar
+    if user.is_founder:
+        default_avatar = MOTESART_FOUNDER_AVATAR
+    
+    await db.users.update_one(
+        {"user_id": user.user_id},
+        {"$set": {"avatar_url": default_avatar}}
+    )
+    
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0, "password_hash": 0})
+    user_doc["computed_avatar"] = get_display_avatar(user_doc)
+    user_doc["display_name"] = get_display_name(user_doc)
     return user_doc
 
 # ==================== MOTESART CONVERSION LOGIC ====================
