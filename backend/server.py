@@ -314,6 +314,26 @@ MAJOR_SCALE_SEMITONES = [0, 2, 4, 5, 7, 9, 11]  # 1, 2, 3, 4, 5, 6, 7
 NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 FLAT_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
 
+# Chord symbol to root mapping (for chord chart parsing)
+CHORD_ROOT_MAP = {
+    'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'Fb': 4,
+    'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 
+    'Bb': 10, 'B': 11, 'Cb': 11
+}
+
+# Chord quality patterns
+CHORD_QUALITY_MAP = {
+    'm': 'minor', 'min': 'minor', '-': 'minor',
+    'M': 'major', 'maj': 'major', 'Δ': 'major',
+    'dim': 'dim', 'o': 'dim', '°': 'dim',
+    'aug': 'aug', '+': 'aug', '⁺': 'aug',
+    'sus2': 'sus²', 'sus4': 'sus⁴',
+    '7': '⁷', 'maj7': 'M⁷', 'M7': 'M⁷', 'Δ7': 'M⁷',
+    'm7': 'm⁷', 'min7': 'm⁷', '-7': 'm⁷',
+    '9': '⁹', '11': '¹¹', '13': '¹³',
+    'add9': 'add⁹', 'add11': 'add¹¹',
+}
+
 def get_note_number(pitch: int, key_root: int) -> str:
     """Convert MIDI pitch to Motesart number relative to key"""
     semitones_from_root = (pitch - key_root) % 12
@@ -333,6 +353,214 @@ def get_note_number(pitch: int, key_root: int) -> str:
     }
     
     return half_number_map.get(semitones_from_root, f"?{semitones_from_root}")
+
+def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
+    """
+    Parse a chord symbol (like "Am7", "G/B", "Cmaj7") into Motesart notation.
+    Uses BASS FIRST, CHORD SECOND for slash chords per methodology.
+    """
+    if not chord_str or chord_str.strip() == '':
+        return None
+    
+    chord_str = chord_str.strip()
+    
+    # Handle slash chords (bass/chord or chord/bass in input)
+    bass_note = None
+    if '/' in chord_str:
+        parts = chord_str.split('/')
+        chord_str = parts[0]
+        bass_note = parts[1] if len(parts) > 1 else None
+    
+    # Extract root note
+    root_match = re.match(r'^([A-G][#b]?)', chord_str)
+    if not root_match:
+        return None
+    
+    root_name = root_match.group(1)
+    root_semitone = CHORD_ROOT_MAP.get(root_name, 0)
+    quality_str = chord_str[len(root_name):]
+    
+    # Convert root to Motesart number
+    root_number = get_note_number(root_semitone + 60, key_root)
+    
+    # Determine chord quality
+    quality = ""
+    extensions = []
+    
+    # Check for minor
+    if quality_str.startswith('m') and not quality_str.startswith('maj'):
+        quality = "m"
+        quality_str = quality_str[1:]
+    elif quality_str.startswith('min'):
+        quality = "m"
+        quality_str = quality_str[3:]
+    
+    # Check for diminished
+    if 'dim' in quality_str or '°' in quality_str or 'o' in quality_str.lower():
+        quality = "°"
+        quality_str = re.sub(r'dim|°|o', '', quality_str, flags=re.IGNORECASE)
+    
+    # Check for augmented
+    if 'aug' in quality_str or '+' in quality_str:
+        quality = "⁺"
+        quality_str = re.sub(r'aug|\+', '', quality_str, flags=re.IGNORECASE)
+    
+    # Check for suspended
+    if 'sus2' in quality_str:
+        quality = "sus²"
+        quality_str = quality_str.replace('sus2', '')
+    elif 'sus4' in quality_str or 'sus' in quality_str:
+        quality = "sus⁴"
+        quality_str = re.sub(r'sus4?', '', quality_str)
+    
+    # Check for 7th
+    if 'maj7' in quality_str.lower() or 'M7' in quality_str or 'Δ7' in quality_str:
+        quality += "M⁷"
+        quality_str = re.sub(r'maj7|M7|Δ7', '', quality_str, flags=re.IGNORECASE)
+    elif '7' in quality_str and 'm' in quality:
+        quality = "m⁷"
+        quality_str = quality_str.replace('7', '')
+    elif '7' in quality_str:
+        quality += "⁷"
+        quality_str = quality_str.replace('7', '')
+    
+    # Check for extensions (2⁹, 4¹¹, 6¹³)
+    if '9' in quality_str:
+        extensions.append("⁹")
+        quality_str = quality_str.replace('9', '')
+    if '11' in quality_str:
+        extensions.append("¹¹")
+        quality_str = quality_str.replace('11', '')
+    if '13' in quality_str:
+        extensions.append("¹³")
+        quality_str = quality_str.replace('13', '')
+    
+    # Build Motesart symbol
+    symbol = root_number + quality
+    if extensions:
+        symbol += "".join(extensions)
+    
+    # Handle slash bass (BASS FIRST, CHORD SECOND per methodology)
+    bass_number = None
+    if bass_note:
+        bass_root = re.match(r'^([A-G][#b]?)', bass_note)
+        if bass_root:
+            bass_semitone = CHORD_ROOT_MAP.get(bass_root.group(1), 0)
+            bass_number = get_note_number(bass_semitone + 60, key_root)
+            # Format: bass/chord (e.g., 1/5 = 1 in bass, 5-chord above)
+            symbol = f"{bass_number}/{root_number}{quality}"
+    
+    return {
+        "original": chord_str,
+        "symbol": symbol,
+        "root": root_number,
+        "quality": quality,
+        "bass": bass_number,
+        "extensions": extensions
+    }
+
+def parse_chord_chart_text(text: str) -> Dict:
+    """
+    Parse chord chart text (like from Send Me chord chart) into structured data.
+    Detects sections (Intro, Verse, Chorus, Bridge) and chord progressions.
+    """
+    lines = text.strip().split('\n')
+    
+    sections = []
+    current_section = None
+    chords_in_section = []
+    
+    # Detect key from first line or chord chart header
+    key_match = re.search(r'Key:\s*([A-G][#b]?)', text, re.IGNORECASE)
+    key_name = key_match.group(1) if key_match else "C"
+    key_root = CHORD_ROOT_MAP.get(key_name, 0)
+    
+    # Detect tempo
+    tempo_match = re.search(r'Tempo:\s*(\d+)', text, re.IGNORECASE)
+    tempo = int(tempo_match.group(1)) if tempo_match else 120
+    
+    # Detect time signature
+    time_match = re.search(r'Time:\s*(\d+/\d+)', text, re.IGNORECASE)
+    time_sig = time_match.group(1) if time_match else "4/4"
+    
+    # Detect title
+    title_match = re.search(r'Title:\s*(.+)', text, re.IGNORECASE)
+    title = title_match.group(1).strip() if title_match else None
+    
+    # Section headers to detect
+    section_patterns = [
+        r'\*\*?(Intro|Verse|Pre\s*Chorus|Chorus|Bridge|Interlude|Refrain|Outro|Tag|Vamp)\s*\d*\*?\*?',
+        r'^(Intro|Verse|Pre\s*Chorus|Chorus|Bridge|Interlude|Refrain|Outro|Tag|Vamp)\s*\d*\s*$'
+    ]
+    
+    # Chord pattern (matches most chord symbols)
+    chord_pattern = re.compile(r'\b([A-G][#b]?(?:m|min|maj|M|dim|aug|sus[24]?|add)?[2-9]?(?:/[A-G][#b]?)?)\b')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        # Check for section header
+        section_found = False
+        for pattern in section_patterns:
+            match = re.search(pattern, line, re.IGNORECASE)
+            if match:
+                # Save previous section
+                if current_section and chords_in_section:
+                    sections.append({
+                        "name": current_section,
+                        "chords": chords_in_section,
+                        "progression": "-".join([c["symbol"] for c in chords_in_section[:8]])
+                    })
+                
+                current_section = match.group(1).strip()
+                chords_in_section = []
+                section_found = True
+                break
+        
+        if section_found:
+            continue
+        
+        # Extract chords from line
+        chord_matches = chord_pattern.findall(line)
+        for chord_str in chord_matches:
+            parsed = parse_chord_symbol(chord_str, key_root)
+            if parsed:
+                chords_in_section.append(parsed)
+    
+    # Save last section
+    if current_section and chords_in_section:
+        sections.append({
+            "name": current_section,
+            "chords": chords_in_section,
+            "progression": "-".join([c["symbol"] for c in chords_in_section[:8]])
+        })
+    
+    # If no sections found, create one from all chords
+    if not sections:
+        all_chords = []
+        for match in chord_pattern.findall(text):
+            parsed = parse_chord_symbol(match, key_root)
+            if parsed:
+                all_chords.append(parsed)
+        if all_chords:
+            sections.append({
+                "name": "Main",
+                "chords": all_chords,
+                "progression": "-".join([c["symbol"] for c in all_chords[:8]])
+            })
+    
+    return {
+        "title": title,
+        "key_signature": f"1 = {key_name}",
+        "key_root": key_root,
+        "key_name": key_name,
+        "tempo": tempo,
+        "time_signature": time_sig,
+        "sections": sections,
+        "content_type": "chord_chart"
+    }
 
 def detect_key_from_notes(notes: List[Dict]) -> tuple:
     """Detect key from note frequency analysis"""
@@ -357,6 +585,27 @@ def detect_key_from_notes(notes: List[Dict]) -> tuple:
     
     key_name = NOTE_NAMES[best_key]
     return best_key, key_name
+
+def detect_key_from_chords(chords: List[str]) -> tuple:
+    """Detect key from a list of chord symbols"""
+    if not chords:
+        return 0, "C"
+    
+    # Count chord roots
+    root_counts = {}
+    for chord in chords:
+        root_match = re.match(r'^([A-G][#b]?)', chord)
+        if root_match:
+            root = root_match.group(1)
+            root_counts[root] = root_counts.get(root, 0) + 1
+    
+    # Most common root is likely the key (or its relative)
+    if root_counts:
+        key_name = max(root_counts, key=root_counts.get)
+        key_root = CHORD_ROOT_MAP.get(key_name, 0)
+        return key_root, key_name
+    
+    return 0, "C"
 
 def detect_chord(pitches: List[int], key_root: int) -> Dict:
     """
