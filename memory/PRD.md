@@ -57,26 +57,55 @@ All outputs include:
 
 ## What's Been Implemented
 
-### Phase 1.3 - January 16, 2026 (Current)
+### Phase 1.4 - January 16, 2026 (CURRENT)
+- **P0 Bug Fixes Completed:**
+  - ✅ PDF export Unicode fix - Now uses DejaVu font for full Unicode support (½, ⁺, °, ⁹, ¹¹, ¹³)
+  - ✅ Dashboard state reset - Properly clears when switching files or uploading new files
+  - ✅ Phase 2 messaging - Clear UI communication that OMR is not yet active
+  - ✅ CORS fix - Allows credentials-based requests from frontend
+  - ✅ Logo integration - Motesart logo in navbar, login page, and empty dashboard state
+
+### Phase 1.3 - January 16, 2026
 - **File Type Support**: PDF, PNG, JPG, MIDI, MusicXML
 - **Chord Chart Parsing**: Parse chord symbols from text
 - **Status Flow**: uploaded → converting → completed → error
 - **Branded Template**: Logo, header, sections, legend footer
 - **Export Formats**: PDF, CSV, Text with branding
+- **Authentication**: Google OAuth and email/password
 
-### Prioritized Backlog
+## Testing Status
+- All 17 backend tests passing
+- All frontend features verified working
+- Test credentials: test@test.com / test123
 
-### P1 (Phase 2)
+## Prioritized Backlog
+
+### P0 (Phase 2 - Next Priority)
 - [ ] OMR integration (Audiveris/ScanScore) for PDF/image conversion
+- [ ] Real-time processing status updates via WebSocket
+
+### P1 (Future)
+- [ ] Enhanced AI Explain Panel with richer context
 - [ ] Hymnal SATB analysis for bass line chord detection
 - [ ] Airtable integration for T.A.M.i dashboard
+- [ ] Key-change detection within a piece
 
-### P2 (Future)
+### P2 (Backlog)
 - [ ] Roman numeral side-by-side view
 - [ ] Real-time playback
 - [ ] Collaborative features
+- [ ] Refactor server.py into modules (auth.py, conversion.py, parsers.py)
+- [ ] Refactor Dashboard.jsx into smaller components
 
 ## Next Action Items
-1. Integrate OMR service for PDF/image to MusicXML conversion
+1. Implement OMR service for PDF/image to MusicXML conversion (Phase 2)
 2. Add chord chart text extraction from PDF
 3. Set up Airtable schema for T.A.M.i sync
+
+## Technical Stack
+- **Backend**: FastAPI, MongoDB (motor), Pydantic
+- **Frontend**: React, Tailwind CSS, Shadcn/UI
+- **Music Processing**: mido (MIDI), music21 (MusicXML)
+- **Authentication**: JWT (email), Emergent Google OAuth
+- **PDF Generation**: fpdf2 with DejaVu Unicode font
+- **AI**: OpenAI GPT-5.2 via Emergent LLM Key
