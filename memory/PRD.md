@@ -1,33 +1,32 @@
 # Motesart Number System Converter - PRD
 
 ## Original Problem Statement
-Build a multi-step "Motesart Number System Converter" app that:
-- Ingests sheet music (PDF, images) and music files (MIDI, MusicXML)
-- Detects key, notes, chords, and structure
-- Renders Motesart numbers with explanations in a clean dashboard
-- Sheet-music-first approach with PDF/image as primary input
+Build a multi-step "Motesart Number System Converter" app that supports:
+- Traditional sheet music (staff notation)
+- Sheet music with chords written above staff
+- Chord charts / lead sheets (section labels + chord symbols only)
+- Hymnals / SATB (multi-staff with SATB voicing)
 
 ## Source of Truth
-`THE-MOTESART-NUMBER-SYSTEM-1pg-Methedology.docx` - Latest methodology document
+`THE-MOTESART-NUMBER-SYSTEM-1pg-Methedology.docx`
 
 ## User Personas
 1. **Music Students** - Learning music theory through the number system
-2. **Music Teachers** - Creating lesson materials and demonstrating concepts
-3. **Musicians** - Analyzing songs and understanding chord progressions
+2. **Music Teachers** - Creating lesson materials
+3. **Church Musicians** - Converting hymnals and chord charts
+4. **Worship Leaders** - Converting lead sheets like "Send Me"
 
-## Core Methodology Rules
+## Methodology Rules
 
 ### Extensions (Section 5)
 - Extensions do NOT introduce new numbers
 - Written as superscripts: 2⁹, 4¹¹, 6¹³
-- Think in 2, 4, 6 relative to scale; superscripts show upper-structure color
+- Think in 2, 4, 6 relative to scale
 
-### Inversions (Section 7) - NEW SLASH RULE
-- Format: BASS FIRST, CHORD SECOND
+### Inversions (Section 7) - BASS FIRST, CHORD SECOND
 - 1/3 = 1 in bass, 3-chord above
 - 1/5 = 1 in bass, 5-chord above
 - 1/7 = 1 in bass, 7-chord above
-- Optional: ² ³ superscripts for inversion markers (teaching use)
 
 ### Symbol Legend
 - m → minor chord
@@ -38,57 +37,46 @@ Build a multi-step "Motesart Number System Converter" app that:
 - sus² → suspended 2
 - sus⁴ → suspended 4
 - ⁷ → seventh chord
-- ⁹ ¹¹ ¹³ → extensions
 - /X → bass note (slash notation)
 - ½ → chromatic step up
 
+## Status Flow
+1. `uploaded` - File stored (PDF/images wait for OMR)
+2. `converting_ocr` - Reading sheet music (Phase 2)
+3. `converting_motesart` - Generating numbers
+4. `completed` - Ready to view
+5. `error` - Conversion failed
+
+## Branded Template
+All outputs include:
+- Header: "Converted by Motesart Technologies — Motesart Number System v1.0"
+- Logo: C → 1 concept image
+- Song title and key signature
+- Sections with progressions
+- Symbol legend footer
+
 ## What's Been Implemented
 
-### Phase 1 MVP - January 16, 2026
-- MIDI and MusicXML parsing with key detection
-- Note-to-number conversion with half-numbers
-- Chord and progression detection
-- Google OAuth + Email authentication
-- Export to PDF/Text/CSV
-- Dark analytics theme dashboard
+### Phase 1.3 - January 16, 2026 (Current)
+- **File Type Support**: PDF, PNG, JPG, MIDI, MusicXML
+- **Chord Chart Parsing**: Parse chord symbols from text
+- **Status Flow**: uploaded → converting → completed → error
+- **Branded Template**: Logo, header, sections, legend footer
+- **Export Formats**: PDF, CSV, Text with branding
 
-### Phase 1.1 Updates - January 16, 2026
-- Navigation: Home | Converter | Learn
-- Learn page with full methodology documentation
-- Email registration alongside Google Auth
-- Sheet-music-first upload wording
-
-### Phase 1.2 Updates - January 16, 2026 (Current)
-- **Methodology Update**: Extensions (2⁹, 4¹¹, 6¹³) and Inversions (BASS FIRST slash rule)
-- **PDF/Image Upload Fix**: Files now store and appear in Recent Files
-- **Sheet Music Viewer**: Original file displayed for PDF/image uploads
-- **Status Badges**: Uploaded | Processing | Converted | Error
-- **New API**: /api/conversions/{id}/file for file retrieval
-
-## Prioritized Backlog
-
-### P0 (Critical) - Done ✓
-- [x] File upload and conversion (MIDI/MusicXML)
-- [x] PDF/Image upload and storage
-- [x] Key detection and note-to-number mapping
-- [x] Chord detection with new methodology
-- [x] User authentication (Google + Email)
-- [x] Export functionality
-- [x] Navigation and Learn page
+### Prioritized Backlog
 
 ### P1 (Phase 2)
-- [ ] OMR integration for PDF/image → MusicXML conversion
-- [ ] Key change detection mid-piece
-- [ ] Piano roll visualization
+- [ ] OMR integration (Audiveris/ScanScore) for PDF/image conversion
+- [ ] Hymnal SATB analysis for bass line chord detection
 - [ ] Airtable integration for T.A.M.i dashboard
 
 ### P2 (Future)
 - [ ] Roman numeral side-by-side view
-- [ ] Real-time playback with number highlighting
-- [ ] Collaborative features (share conversions)
+- [ ] Real-time playback
+- [ ] Collaborative features
 
 ## Next Action Items
-1. Integrate OMR service (Audiveris/ScanScore) for PDF/image conversion
-2. Set up Airtable schema (Users, Conversions, Pieces)
-3. Add key change detection within pieces
-4. Build piano roll visualization
+1. Integrate OMR service for PDF/image to MusicXML conversion
+2. Add chord chart text extraction from PDF
+3. Set up Airtable schema for T.A.M.i sync
