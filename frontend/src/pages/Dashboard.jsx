@@ -152,18 +152,22 @@ export default function Dashboard({ user }) {
 
       const conversion = await response.json();
       
+      // IMPORTANT: Clear previous state before selecting new conversion
+      setExplanation("");
+      setSelectedConversion(null);
+      
       // Show appropriate message based on status
       if (conversion.status === "completed") {
-        toast.success("File converted successfully!");
+        toast.success("File converted successfully to Motesart numbers!");
       } else if (conversion.status === "uploaded") {
-        toast.success("File uploaded! OMR conversion coming in Phase 2.");
+        toast.info("Sheet music saved! Full OMR conversion is a Phase 2 feature. Upload MusicXML or MIDI for instant conversion.");
       } else {
-        toast.success("File uploaded and processing...");
+        toast.success("File uploaded and converting to Motesart numbers...");
       }
       
       // Select the new conversion immediately
       setSelectedConversion(conversion);
-      // Refresh the list
+      // Refresh the list to get latest status
       fetchConversions(false);
     } catch (error) {
       toast.error(error.message || "Failed to upload file");
