@@ -1,21 +1,19 @@
-import { Music, Sparkles, FileMusic, Download, ArrowRight, Waves } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Music, Sparkles, FileMusic, Download, ArrowRight, Waves, BookOpen, ChevronRight, FileImage } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Navbar } from "@/components/Navbar";
 
 const HERO_BG = "https://images.unsplash.com/photo-1759771963975-8a4885446f1f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDF8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMG5lb24lMjBzb3VuZCUyMHdhdmVzJTIwZGFyayUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzY4NTQyMTYzfDA&ixlib=rb-4.1.0&q=85";
-const FEATURE_IMG_1 = "https://images.unsplash.com/photo-1762281429507-a0384348f4b1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDF8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMG5lb24lMjBzb3VuZCUyMHdhdmVzJTIwZGFyayUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzY4NTQyMTYzfDA&ixlib=rb-4.1.0&q=85";
-const FEATURE_IMG_2 = "https://images.unsplash.com/photo-1714123710240-974b15c86409?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwxfHxtdXNpY2lhbiUyMHByb2R1Y2luZyUyMG11c2ljJTIwaW4lMjBkYXJrJTIwc3R1ZGlvfGVufDB8fHx8MTc2ODU0MjE2NXww&ixlib=rb-4.1.0&q=85";
-
-const handleLogin = () => {
-  // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-  const redirectUrl = window.location.origin + '/dashboard';
-  window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-};
+const FEATURE_IMG = "https://images.unsplash.com/photo-1714123710240-974b15c86409?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwxfHxtdXNpY2lhbiUyMHByb2R1Y2luZyUyMG11c2ljJTIwaW4lMjBkYXJrJTIwc3R1ZGlvfGVufDB8fHx8MTc2ODU0MjE2NXww&ixlib=rb-4.1.0&q=85";
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-sonic-void text-white">
+      <Navbar />
+
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center overflow-hidden">
+      <section className="relative min-h-[85vh] flex items-center overflow-hidden">
         {/* Background */}
         <div className="absolute inset-0">
           <img
@@ -28,23 +26,7 @@ export default function LandingPage() {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-20">
-          <nav className="flex items-center justify-between mb-20">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-neon-indigo/20 border border-neon-indigo/50 flex items-center justify-center">
-                <Music className="w-5 h-5 text-neon-indigo" />
-              </div>
-              <span className="font-heading font-semibold text-xl tracking-tight">Motesart</span>
-            </div>
-            <Button
-              onClick={handleLogin}
-              className="bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-full px-6"
-              data-testid="nav-login-btn"
-            >
-              Sign In
-            </Button>
-          </nav>
-
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-16">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8 animate-slide-in-up">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neon-indigo/20 border border-neon-indigo/30">
@@ -53,33 +35,36 @@ export default function LandingPage() {
               </div>
 
               <h1 className="font-heading text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-none">
-                Music in
+                See Your Sheet Music in
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-neon-indigo to-neon-cyan">
                   Numbers
                 </span>
               </h1>
 
               <p className="text-lg text-slate-400 max-w-lg leading-relaxed">
-                Transform any MIDI or MusicXML file into the Motesart Number System. 
-                Visualize chords, detect progressions, and understand music theory like never before.
+                Upload your sheet music and see it instantly in the Motesart Number System. 
+                Visualize chords, detect progressions, and transpose to any key in seconds.
               </p>
 
               <div className="flex flex-wrap gap-4">
-                <Button
-                  onClick={handleLogin}
-                  className="bg-neon-indigo hover:bg-indigo-500 text-white rounded-full px-8 py-6 text-lg font-medium glow-primary"
-                  data-testid="hero-get-started-btn"
-                >
-                  Get Started Free
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-slate-700 hover:bg-slate-800 text-slate-300 rounded-full px-8 py-6 text-lg"
-                  data-testid="hero-learn-more-btn"
-                >
-                  Learn More
-                </Button>
+                <Link to="/converter">
+                  <Button
+                    className="bg-neon-indigo hover:bg-indigo-500 text-white rounded-full px-8 py-6 text-lg font-medium glow-primary"
+                    data-testid="hero-upload-btn"
+                  >
+                    <FileImage className="w-5 h-5 mr-2" />
+                    Upload Sheet Music
+                  </Button>
+                </Link>
+                <Link to="/learn">
+                  <Button
+                    variant="outline"
+                    className="border-slate-700 hover:bg-slate-800 text-slate-300 rounded-full px-8 py-6 text-lg"
+                    data-testid="hero-learn-btn"
+                  >
+                    Learn More
+                  </Button>
+                </Link>
               </div>
 
               <div className="flex items-center gap-8 pt-4">
@@ -152,34 +137,97 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Decorative elements */}
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-sonic-void to-transparent" />
       </section>
 
-      {/* Features Section */}
+      {/* Learn More - Short Answers */}
+      <section className="py-24 px-6 bg-slate-900/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold mb-4">Learn More</h2>
+            <p className="text-slate-400">Quick answers about the Motesart methodology</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* What is Motesart */}
+            <Card className="bg-slate-900/50 border-slate-800 hover:border-neon-indigo/50 transition-colors card-hover">
+              <CardContent className="pt-6">
+                <div className="w-12 h-12 rounded-xl bg-neon-indigo/20 flex items-center justify-center mb-4">
+                  <BookOpen className="w-6 h-6 text-neon-indigo" />
+                </div>
+                <h3 className="font-heading text-xl font-semibold mb-3">What is Motesart Methodology?</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  A numbers-first music language: each note becomes a scale degree (1–7) so you can 
+                  hear, play, and transpose faster than with letters alone.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* How we convert */}
+            <Card className="bg-slate-900/50 border-slate-800 hover:border-neon-cyan/50 transition-colors card-hover">
+              <CardContent className="pt-6">
+                <div className="w-12 h-12 rounded-xl bg-neon-cyan/20 flex items-center justify-center mb-4">
+                  <Waves className="w-6 h-6 text-neon-cyan" />
+                </div>
+                <h3 className="font-heading text-xl font-semibold mb-3">How do we convert your music?</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  We read the key, chords, and notes from your sheet music, then translate every pitch 
+                  into a number and every chord into its function (1–6–4–5, 2–5–1, etc.).
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Symbols */}
+            <Card className="bg-slate-900/50 border-slate-800 hover:border-neon-purple/50 transition-colors card-hover">
+              <CardContent className="pt-6">
+                <div className="w-12 h-12 rounded-xl bg-neon-purple/20 flex items-center justify-center mb-4">
+                  <span className="font-mono text-lg text-neon-purple">½</span>
+                </div>
+                <h3 className="font-heading text-xl font-semibold mb-3">What do the symbols mean?</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  <span className="font-mono text-neon-cyan">½</span> = chromatic up, 
+                  <span className="font-mono text-neon-pink"> /3</span> = 3rd in the bass, 
+                  <span className="font-mono text-slate-300"> m</span> = minor, 
+                  <span className="font-mono text-slate-300"> M</span> = non-diatonic major, 
+                  <span className="font-mono text-neon-purple"> 7</span> = seventh chords.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="text-center mt-8">
+            <Link to="/learn" className="inline-flex items-center gap-2 text-neon-indigo hover:text-indigo-400 transition-colors">
+              View Motesart Key
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
       <section className="py-24 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-heading text-4xl font-bold mb-4">How It Works</h2>
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold mb-4">How It Works</h2>
             <p className="text-slate-400 max-w-2xl mx-auto">
-              Upload your music files and get instant conversion to the Motesart Number System
+              Three simple steps to transform your sheet music into numbers
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <div className="group relative p-6 bg-slate-900/50 border border-white/5 hover:border-neon-indigo/50 rounded-2xl transition-all duration-500 card-hover">
+            <div className="relative group p-6 bg-slate-900/50 border border-white/5 hover:border-neon-indigo/50 rounded-2xl transition-all duration-500 card-hover">
+              <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-neon-indigo flex items-center justify-center font-bold text-sm">1</div>
               <div className="w-12 h-12 rounded-xl bg-neon-indigo/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <FileMusic className="w-6 h-6 text-neon-indigo" />
+                <FileImage className="w-6 h-6 text-neon-indigo" />
               </div>
-              <h3 className="font-heading text-xl font-semibold mb-2">Upload Music</h3>
+              <h3 className="font-heading text-xl font-semibold mb-2">Upload Sheet Music</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Drag and drop MIDI or MusicXML files. We support exports from any DAW, notation software, or keyboard.
+                Drag and drop your sheet music (PDF or image). Also supports MusicXML and MIDI from DAWs and notation software.
               </p>
             </div>
 
-            {/* Feature 2 */}
-            <div className="group relative p-6 bg-slate-900/50 border border-white/5 hover:border-neon-cyan/50 rounded-2xl transition-all duration-500 card-hover">
+            <div className="relative group p-6 bg-slate-900/50 border border-white/5 hover:border-neon-cyan/50 rounded-2xl transition-all duration-500 card-hover">
+              <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-neon-cyan flex items-center justify-center font-bold text-sm text-slate-900">2</div>
               <div className="w-12 h-12 rounded-xl bg-neon-cyan/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Waves className="w-6 h-6 text-neon-cyan" />
               </div>
@@ -189,32 +237,59 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Feature 3 */}
-            <div className="group relative p-6 bg-slate-900/50 border border-white/5 hover:border-neon-purple/50 rounded-2xl transition-all duration-500 card-hover">
+            <div className="relative group p-6 bg-slate-900/50 border border-white/5 hover:border-neon-purple/50 rounded-2xl transition-all duration-500 card-hover">
+              <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-neon-purple flex items-center justify-center font-bold text-sm">3</div>
               <div className="w-12 h-12 rounded-xl bg-neon-purple/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Download className="w-6 h-6 text-neon-purple" />
               </div>
               <h3 className="font-heading text-xl font-semibold mb-2">Export & Share</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Export to PDF, CSV for Airtable, or plain text. Perfect for lessons, practice, and study.
+                Export to PDF, CSV for Airtable, or print. Perfect for lessons, practice, and study with students, bands, and choirs.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Visual Section */}
+      {/* See Music Differently */}
       <section className="py-24 px-6 bg-slate-900/30">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-6">
-            <h2 className="font-heading text-4xl font-bold">
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold">
               See Music
               <span className="text-neon-cyan"> Differently</span>
             </h2>
             <p className="text-slate-400 leading-relaxed">
-              The Motesart Number System replaces traditional note names with numbers relative to the key. 
-              This universal approach works in any key, making transposition instant and chord patterns obvious.
+              Same music. New language. Traditional notation on the left; Motesart numbers on the right.
+              The universal number system makes patterns obvious and transposition instant.
             </p>
+            
+            {/* Side by side comparison */}
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-800/30 border border-slate-700">
+              <div className="text-center">
+                <div className="text-xs text-slate-500 uppercase tracking-wider mb-3">Traditional</div>
+                <div className="font-mono text-lg text-slate-300 space-y-1">
+                  <div>C - G - Am - F</div>
+                  <div className="text-sm text-slate-500">Key of C</div>
+                </div>
+              </div>
+              <div className="text-center border-l border-slate-700">
+                <div className="text-xs text-slate-500 uppercase tracking-wider mb-3">Motesart</div>
+                <div className="font-mono text-lg space-y-1">
+                  <div>
+                    <span className="text-neon-cyan">1</span>
+                    <span className="text-slate-500"> - </span>
+                    <span className="text-neon-cyan">5</span>
+                    <span className="text-slate-500"> - </span>
+                    <span className="text-neon-purple">6m</span>
+                    <span className="text-slate-500"> - </span>
+                    <span className="text-neon-cyan">4</span>
+                  </div>
+                  <div className="text-sm text-neon-indigo">1 = C</div>
+                </div>
+              </div>
+            </div>
+
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-slate-300">
                 <span className="w-6 h-6 rounded-full bg-neon-indigo/20 flex items-center justify-center text-xs text-neon-indigo">1</span>
@@ -232,8 +307,8 @@ export default function LandingPage() {
           </div>
           <div className="relative">
             <img
-              src={FEATURE_IMG_1}
-              alt="Sound wave visualization"
+              src={FEATURE_IMG}
+              alt="Musician in studio"
               className="rounded-2xl w-full object-cover aspect-video"
             />
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-sonic-void/80 to-transparent" />
@@ -247,20 +322,21 @@ export default function LandingPage() {
           <div className="glass-panel rounded-3xl p-12 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-neon-indigo/10 to-neon-purple/10" />
             <div className="relative z-10">
-              <h2 className="font-heading text-4xl font-bold mb-4">
+              <h2 className="font-heading text-3xl sm:text-4xl font-bold mb-4">
                 Ready to Transform Your Music?
               </h2>
               <p className="text-slate-400 mb-8 max-w-xl mx-auto">
                 Join musicians and teachers using the Motesart Number System for faster learning and deeper understanding.
               </p>
-              <Button
-                onClick={handleLogin}
-                className="bg-neon-indigo hover:bg-indigo-500 text-white rounded-full px-10 py-6 text-lg font-medium glow-primary"
-                data-testid="cta-get-started-btn"
-              >
-                Start Converting Now
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
+              <Link to="/converter">
+                <Button
+                  className="bg-neon-indigo hover:bg-indigo-500 text-white rounded-full px-10 py-6 text-lg font-medium glow-primary"
+                  data-testid="cta-upload-btn"
+                >
+                  Upload Sheet Music
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
