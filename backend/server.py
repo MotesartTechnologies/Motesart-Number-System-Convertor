@@ -1253,51 +1253,51 @@ async def export_conversion(
         )
     
     elif format == "pdf":
-        # Generate branded PDF (using ASCII-safe characters)
+        # Generate branded PDF with Unicode support using DejaVu font
         from fpdf import FPDF
         
-        # Helper to make strings PDF-safe
-        def pdf_safe(s):
-            if not s:
-                return ""
-            return s.replace("—", "-").replace("½", "1/2").replace("⁺", "+").replace("°", "o").replace("²", "2").replace("⁴", "4").replace("⁹", "9").replace("¹¹", "11").replace("¹³", "13")
-        
         pdf = FPDF()
+        
+        # Add Unicode font (DejaVu Sans supports all Motesart symbols)
+        pdf.add_font("DejaVu", "", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", uni=True)
+        pdf.add_font("DejaVu", "B", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", uni=True)
+        pdf.add_font("DejaVuMono", "", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", uni=True)
+        
         pdf.add_page()
         
-        # Header with branding
-        pdf.set_font("Helvetica", "B", 18)
+        # Header with branding (using Unicode-safe font)
+        pdf.set_font("DejaVu", "B", 18)
         pdf.cell(0, 12, "Motesart Number Conversion", ln=True, align="C")
-        pdf.set_font("Helvetica", "I", 10)
+        pdf.set_font("DejaVu", "", 10)
         pdf.set_text_color(100, 100, 100)
-        pdf.cell(0, 6, branded_header, ln=True, align="C")
+        pdf.cell(0, 6, branded_header_rich, ln=True, align="C")  # Use rich version with proper em-dash
         pdf.set_text_color(0, 0, 0)
         pdf.ln(5)
         
-        # Title and Key
-        pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 10, pdf_safe(f"{title} - {key_sig}"), ln=True, align="C")
+        # Title and Key (Unicode symbols now supported)
+        pdf.set_font("DejaVu", "B", 14)
+        pdf.cell(0, 10, f"{title} — {key_sig}", ln=True, align="C")
         
-        pdf.set_font("Helvetica", "", 11)
+        pdf.set_font("DejaVu", "", 11)
         pdf.cell(0, 8, f"Time: {time_sig} | Tempo: {tempo} BPM | Type: {CONTENT_TYPES.get(content_type, content_type)}", ln=True, align="C")
         pdf.ln(8)
         
         # Sections & Progressions
-        pdf.set_font("Helvetica", "B", 13)
+        pdf.set_font("DejaVu", "B", 13)
         pdf.cell(0, 10, "Sections & Progressions", ln=True)
-        pdf.set_font("Courier", "", 11)
         
         for section in conversion.get("sections", []):
             section_name = section.get("name", "Section")
-            progression = pdf_safe(section.get("progression", ""))
+            progression = section.get("progression", "")  # Now can contain Unicode
             chords = section.get("chords", [])
             
-            pdf.set_font("Helvetica", "B", 11)
+            pdf.set_font("DejaVu", "B", 11)
             pdf.cell(0, 8, f"{section_name}:", ln=True)
             
-            pdf.set_font("Courier", "", 11)
+            pdf.set_font("DejaVuMono", "", 11)
             if chords:
-                chord_symbols = " | ".join([pdf_safe(c.get("symbol", "")) for c in chords[:12]])
+                # No need for pdf_safe - DejaVu supports all symbols
+                chord_symbols = " | ".join([c.get("symbol", "") for c in chords[:12]])
                 pdf.multi_cell(0, 6, chord_symbols)
             elif progression:
                 pdf.cell(0, 6, progression, ln=True)
@@ -1307,29 +1307,29 @@ async def export_conversion(
         all_chords = conversion.get("chords", [])
         if all_chords:
             pdf.ln(5)
-            pdf.set_font("Helvetica", "B", 13)
+            pdf.set_font("DejaVu", "B", 13)
             pdf.cell(0, 10, "All Chords", ln=True)
-            pdf.set_font("Courier", "", 10)
-            chord_line = " | ".join([pdf_safe(c.get("symbol", "")) for c in all_chords[:30]])
+            pdf.set_font("DejaVuMono", "", 10)
+            chord_line = " | ".join([c.get("symbol", "") for c in all_chords[:30]])
             pdf.multi_cell(0, 6, chord_line)
         
         # Progressions Detected
         progressions = conversion.get("progressions", [])
         if progressions:
             pdf.ln(5)
-            pdf.set_font("Helvetica", "B", 13)
+            pdf.set_font("DejaVu", "B", 13)
             pdf.cell(0, 10, "Progressions Detected", ln=True)
-            pdf.set_font("Helvetica", "", 11)
+            pdf.set_font("DejaVu", "", 11)
             for prog in progressions:
-                prog_name = pdf_safe(prog.get('name', ''))
-                prog_desc = pdf_safe(prog.get('description', ''))
-                pdf.cell(0, 7, f"- {prog_name}: {prog_desc}", ln=True)
+                prog_name = prog.get('name', '')
+                prog_desc = prog.get('description', '')
+                pdf.cell(0, 7, f"• {prog_name}: {prog_desc}", ln=True)
         
-        # Footer Legend (ASCII-safe)
+        # Footer Legend (Unicode-rich version now supported)
         pdf.ln(10)
-        pdf.set_font("Helvetica", "I", 8)
+        pdf.set_font("DejaVu", "", 8)
         pdf.set_text_color(80, 80, 80)
-        pdf.multi_cell(0, 5, MOTESART_LEGEND)
+        pdf.multi_cell(0, 5, MOTESART_LEGEND_RICH)
         
         pdf_output = io.BytesIO()
         pdf.output(pdf_output)
