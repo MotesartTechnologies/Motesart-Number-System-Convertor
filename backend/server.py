@@ -1253,8 +1253,14 @@ async def export_conversion(
         )
     
     elif format == "pdf":
-        # Generate branded PDF
+        # Generate branded PDF (using ASCII-safe characters)
         from fpdf import FPDF
+        
+        # Helper to make strings PDF-safe
+        def pdf_safe(s):
+            if not s:
+                return ""
+            return s.replace("—", "-").replace("½", "1/2").replace("⁺", "+").replace("°", "o").replace("²", "2").replace("⁴", "4").replace("⁹", "9").replace("¹¹", "11").replace("¹³", "13")
         
         pdf = FPDF()
         pdf.add_page()
@@ -1270,7 +1276,7 @@ async def export_conversion(
         
         # Title and Key
         pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 10, f"{title} — {key_sig}", ln=True, align="C")
+        pdf.cell(0, 10, pdf_safe(f"{title} - {key_sig}"), ln=True, align="C")
         
         pdf.set_font("Helvetica", "", 11)
         pdf.cell(0, 8, f"Time: {time_sig} | Tempo: {tempo} BPM | Type: {CONTENT_TYPES.get(content_type, content_type)}", ln=True, align="C")
@@ -1283,7 +1289,7 @@ async def export_conversion(
         
         for section in conversion.get("sections", []):
             section_name = section.get("name", "Section")
-            progression = section.get("progression", "")
+            progression = pdf_safe(section.get("progression", ""))
             chords = section.get("chords", [])
             
             pdf.set_font("Helvetica", "B", 11)
@@ -1291,7 +1297,7 @@ async def export_conversion(
             
             pdf.set_font("Courier", "", 11)
             if chords:
-                chord_symbols = " | ".join([c.get("symbol", "") for c in chords[:12]])
+                chord_symbols = " | ".join([pdf_safe(c.get("symbol", "")) for c in chords[:12]])
                 pdf.multi_cell(0, 6, chord_symbols)
             elif progression:
                 pdf.cell(0, 6, progression, ln=True)
