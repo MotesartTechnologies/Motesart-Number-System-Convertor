@@ -151,9 +151,20 @@ export default function Dashboard({ user }) {
       }
 
       const conversion = await response.json();
-      toast.success("File converted successfully!");
+      
+      // Show appropriate message based on status
+      if (conversion.status === "completed") {
+        toast.success("File converted successfully!");
+      } else if (conversion.status === "uploaded") {
+        toast.success("File uploaded! OMR conversion coming in Phase 2.");
+      } else {
+        toast.success("File uploaded and processing...");
+      }
+      
+      // Select the new conversion immediately
       setSelectedConversion(conversion);
-      fetchConversions();
+      // Refresh the list
+      fetchConversions(false);
     } catch (error) {
       toast.error(error.message || "Failed to upload file");
     } finally {
