@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, User, LogOut } from "lucide-react";
+import { Menu, X, User, LogOut, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,6 +22,26 @@ const NAV_ITEMS = [
   { name: "Learn", path: "/learn" },
 ];
 
+// Helper to get display avatar for a user
+const getUserAvatar = (user) => {
+  if (!user) return null;
+  // Priority: computed_avatar > avatar_url > picture > fallback
+  return user.computed_avatar || user.avatar_url || user.picture || null;
+};
+
+// Helper to get display name for a user
+const getUserDisplayName = (user) => {
+  if (!user) return "User";
+  return user.display_name || user.username || user.name || "User";
+};
+
+// Helper to get initials for avatar fallback
+const getUserInitials = (user) => {
+  if (!user) return "U";
+  const name = user.display_name || user.username || user.name || "";
+  return name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "U";
+};
+
 export const Navbar = ({ user, onLogout }) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -31,6 +51,11 @@ export const Navbar = ({ user, onLogout }) => {
     const redirectUrl = window.location.origin + '/converter';
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
+
+  const avatarUrl = getUserAvatar(user);
+  const displayName = getUserDisplayName(user);
+  const initials = getUserInitials(user);
+  const isFounder = user?.is_founder || user?.username === "Motesart";
 
   return (
     <nav className="sticky top-0 z-50 bg-sonic-surface/80 backdrop-blur-xl border-b border-slate-800">
@@ -69,20 +94,45 @@ export const Navbar = ({ user, onLogout }) => {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2" data-testid="user-menu-btn">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={user.picture} />
-                      <AvatarFallback className="bg-neon-indigo/20 text-neon-indigo text-sm">
-                        {user.name?.[0] || "M"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="hidden sm:inline text-sm text-slate-300">{user.name}</span>
+                  <Button variant="ghost" className="gap-2 relative" data-testid="user-menu-btn">
+                    <div className="relative">
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={avatarUrl} />
+                        <AvatarFallback className="bg-neon-indigo/20 text-neon-indigo text-sm">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      {/* Crown icon for founder */}
+                      {isFounder && (
+                        <Crown 
+                          className="absolute -top-2 -right-1 w-4 h-4 text-yellow-400 fill-yellow-400" 
+                          data-testid="founder-crown"
+                        />
+                      )}
+                    </div>
+                    <span className="hidden sm:inline text-sm text-slate-300">
+                      {displayName}
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem className="text-slate-400">
-                    {user.email}
-                  </DropdownMenuItem>
+                  <div className="px-2 py-1.5">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="w-6 h-6">
+                        <AvatarImage src={avatarUrl} />
+                        <AvatarFallback className="bg-neon-indigo/20 text-neon-indigo text-xs">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate flex items-center gap-1">
+                          {displayName}
+                          {isFounder && <Crown className="w-3 h-3 text-yellow-400 fill-yellow-400" />}
+                        </p>
+                        <p className="text-xs text-slate-400 truncate">{user.email}</p>
+                      </div>
+                    </div>
+                  </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link to="/account">
