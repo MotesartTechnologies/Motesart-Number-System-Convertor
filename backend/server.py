@@ -14,6 +14,7 @@ import httpx
 import io
 import json
 import tempfile
+import re
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -29,6 +30,26 @@ api_router = APIRouter(prefix="/api")
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# ==================== CONSTANTS ====================
+
+# Motesart Logo URL
+MOTESART_LOGO_URL = "https://customer-assets.emergentagent.com/job_music-to-numbers/artifacts/eqmmw6fl_2316F097-7806-4D1F-AB36-BB5FF560800D.png"
+
+# Content types for detection
+CONTENT_TYPES = {
+    "chord_chart": "Chord Chart / Lead Sheet",
+    "traditional": "Traditional Sheet Music",
+    "hymnal": "Hymnal / SATB",
+    "lead_sheet": "Lead Sheet with Chords"
+}
+
+# Conversion statuses
+STATUS_UPLOADED = "uploaded"
+STATUS_CONVERTING_OCR = "converting_ocr"
+STATUS_CONVERTING_MOTESART = "converting_motesart"
+STATUS_COMPLETED = "completed"
+STATUS_ERROR = "error"
 
 # ==================== MODELS ====================
 
@@ -54,7 +75,9 @@ class Conversion(BaseModel):
     user_id: str
     filename: str
     file_type: str
-    status: str  # processing, completed, error
+    content_type: Optional[str] = None  # chord_chart, traditional, hymnal, lead_sheet
+    status: str  # uploaded, converting_ocr, converting_motesart, completed, error
+    status_message: Optional[str] = None
     key_signature: Optional[str] = None
     time_signature: Optional[str] = None
     tempo: Optional[int] = None
