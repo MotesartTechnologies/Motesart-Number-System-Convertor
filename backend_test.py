@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Motesart Number System Converter - Backend API Testing (Iteration 2)
-Tests new email authentication features and existing endpoints
+Motesart Number System Converter - Backend API Testing (Iteration 3)
+Tests updated methodology (Extensions Section 5, Inversions Section 7) and PDF/image upload fix
 """
 
 import requests
 import sys
 import json
 import time
+import io
 from datetime import datetime
 from pathlib import Path
 
@@ -19,8 +20,12 @@ class MotesartAPITester:
         self.tests_run = 0
         self.tests_passed = 0
         self.test_results = []
-        self.test_user_email = f"test_user_{int(time.time())}@example.com"
-        self.test_user_password = "TestPass123!"
+        # Use provided test credentials
+        self.test_user_email = "test2@motesart.com"
+        self.test_user_password = "testpassword123"
+        self.pdf_conversion_id = None
+        self.image_conversion_id = None
+        self.midi_conversion_id = None
 
     def log_test(self, name, success, details="", expected_status=None, actual_status=None):
         """Log test result"""
