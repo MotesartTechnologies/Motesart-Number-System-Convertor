@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Motesart Number System Converter - Backend API Testing
-Tests all backend endpoints systematically
+Motesart Number System Converter - Backend API Testing (Iteration 2)
+Tests new email authentication features and existing endpoints
 """
 
 import requests
@@ -12,13 +12,15 @@ from datetime import datetime
 from pathlib import Path
 
 class MotesartAPITester:
-    def __init__(self, base_url="https://music-to-numbers.preview.emergentagent.com", session_token=None):
+    def __init__(self, base_url="https://music-to-numbers.preview.emergentagent.com"):
         self.base_url = base_url
-        self.session_token = session_token
+        self.session_token = None
         self.user_id = None
         self.tests_run = 0
         self.tests_passed = 0
         self.test_results = []
+        self.test_user_email = f"test_user_{int(time.time())}@example.com"
+        self.test_user_password = "TestPass123!"
 
     def log_test(self, name, success, details="", expected_status=None, actual_status=None):
         """Log test result"""
