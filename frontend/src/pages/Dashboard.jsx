@@ -368,14 +368,16 @@ export default function Dashboard({ user }) {
                           {getFileIcon(conv.file_type)}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{conv.filename}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs font-mono text-neon-indigo">
-                                {conv.key_signature || "Processing..."}
-                              </span>
-                              <span className="text-xs text-slate-600">•</span>
+                            <div className="flex items-center flex-wrap gap-2 mt-1">
+                              {conv.key_signature && (
+                                <span className="text-xs font-mono text-neon-indigo">
+                                  {conv.key_signature}
+                                </span>
+                              )}
                               <span className="text-xs text-slate-500 uppercase">
                                 {conv.file_type}
                               </span>
+                              {getStatusBadge(conv.status, conv.is_sheet_music)}
                             </div>
                             <div className="flex items-center gap-1 mt-1 text-xs text-slate-600">
                               <Clock className="w-3 h-3" />
@@ -385,12 +387,6 @@ export default function Dashboard({ user }) {
                           <div className="flex items-center gap-1">
                             {conv.status === "processing" && (
                               <Loader2 className="w-4 h-4 text-yellow-400 animate-spin" />
-                            )}
-                            {conv.status === "completed" && (
-                              <CheckCircle className="w-4 h-4 text-green-400" />
-                            )}
-                            {conv.status === "error" && (
-                              <AlertCircle className="w-4 h-4 text-red-400" />
                             )}
                             <Button
                               variant="ghost"
@@ -408,6 +404,51 @@ export default function Dashboard({ user }) {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Center Column - Motesart Numbers */}
+        <div className="lg:col-span-6 space-y-4 overflow-hidden flex flex-col">
+          {/* Sheet Music Viewer (for uploaded PDF/images) */}
+          {selectedConversion?.is_sheet_music && selectedConversion?.status === "uploaded" && (
+            <Card className="bg-slate-900/50 border-slate-800 border-yellow-500/30">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-heading flex items-center gap-2">
+                    <FileImage className="w-4 h-4 text-neon-pink" />
+                    Original Sheet Music
+                  </CardTitle>
+                  <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                    Waiting for conversion (OMR Phase 2)
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="aspect-[4/3] rounded-lg bg-slate-800/50 border border-slate-700 flex items-center justify-center overflow-hidden">
+                  {selectedConversion.file_type === "pdf" ? (
+                    <iframe
+                      src={`${BACKEND_URL}/api/conversions/${selectedConversion.conversion_id}/file`}
+                      className="w-full h-full"
+                      title="Sheet Music PDF"
+                    />
+                  ) : (
+                    <img
+                      src={`${BACKEND_URL}/api/conversions/${selectedConversion.conversion_id}/file`}
+                      alt="Sheet Music"
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mt-3 text-center">
+                  Your file is uploaded and saved. OMR conversion to Motesart numbers coming in Phase 2.
+                </p>
+              </CardContent>
+            </Card>
+          )}
                   </div>
                 )}
               </ScrollArea>
