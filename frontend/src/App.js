@@ -3,6 +3,8 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import LandingPage from "@/pages/LandingPage";
 import Dashboard from "@/pages/Dashboard";
+import LoginPage from "@/pages/LoginPage";
+import LearnPage from "@/pages/LearnPage";
 import { Toaster } from "@/components/ui/sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -39,7 +41,7 @@ const AuthCallback = () => {
         }
 
         const user = await response.json();
-        navigate("/dashboard", { replace: true, state: { user } });
+        navigate("/converter", { replace: true, state: { user } });
       } catch (error) {
         console.error("Auth error:", error);
         navigate("/", { replace: true });
@@ -88,7 +90,7 @@ const ProtectedRoute = ({ children }) => {
         setUser(userData);
       } catch (error) {
         setIsAuthenticated(false);
-        navigate("/", { replace: true });
+        navigate("/login", { replace: true });
       }
     };
 
@@ -122,6 +124,17 @@ const AppRouter = () => {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/learn" element={<LearnPage />} />
+      <Route
+        path="/converter"
+        element={
+          <ProtectedRoute>
+            {({ user }) => <Dashboard user={user} />}
+          </ProtectedRoute>
+        }
+      />
+      {/* Keep /dashboard as alias for /converter */}
       <Route
         path="/dashboard"
         element={

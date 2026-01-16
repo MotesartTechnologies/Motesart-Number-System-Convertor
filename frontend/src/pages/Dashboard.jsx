@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Music,
   Upload,
@@ -7,29 +7,24 @@ import {
   Sparkles,
   Download,
   Settings,
-  LogOut,
   Trash2,
   RefreshCw,
-  ChevronRight,
   Info,
   AlertCircle,
   CheckCircle,
   Loader2,
   Eye,
+  FileImage,
+  FileText,
+  Clock,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Navbar } from "@/components/Navbar";
 import { toast } from "sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -74,11 +69,11 @@ export default function Dashboard({ user }) {
   const handleUpload = async (file) => {
     if (!file) return;
 
-    const validTypes = [".mid", ".midi", ".xml", ".musicxml", ".mxl"];
+    const validTypes = [".mid", ".midi", ".xml", ".musicxml", ".mxl", ".pdf", ".png", ".jpg", ".jpeg"];
     const extension = "." + file.name.split(".").pop().toLowerCase();
 
     if (!validTypes.includes(extension)) {
-      toast.error("Unsupported file type. Please upload MIDI or MusicXML files.");
+      toast.error("Unsupported file type. Please upload sheet music (PDF, image) or MusicXML/MIDI files.");
       return;
     }
 
@@ -208,6 +203,11 @@ export default function Dashboard({ user }) {
     }
   };
 
+  // Print
+  const handlePrint = () => {
+    window.print();
+  };
+
   // Logout
   const handleLogout = async () => {
     try {
@@ -221,49 +221,31 @@ export default function Dashboard({ user }) {
     }
   };
 
+  // Get file type icon
+  const getFileIcon = (fileType) => {
+    if (["pdf", "png", "jpg", "jpeg"].includes(fileType)) {
+      return <FileImage className="w-4 h-4 text-neon-pink" />;
+    }
+    if (["mid", "midi"].includes(fileType)) {
+      return <Music className="w-4 h-4 text-neon-purple" />;
+    }
+    return <FileText className="w-4 h-4 text-neon-cyan" />;
+  };
+
+  // Format date
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-sonic-void" data-testid="dashboard">
-      {/* Top Bar */}
-      <header className="h-16 border-b border-slate-800 px-6 flex items-center justify-between bg-sonic-surface/50 backdrop-blur-lg sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-neon-indigo/20 border border-neon-indigo/50 flex items-center justify-center">
-            <Music className="w-4 h-4 text-neon-indigo" />
-          </div>
-          <span className="font-heading font-semibold text-lg">Motesart Converter</span>
-        </div>
-
-        {selectedConversion && (
-          <div className="hidden md:flex items-center gap-2 text-sm">
-            <span className="text-slate-400">{selectedConversion.filename}</span>
-            <span className="text-slate-600">–</span>
-            <span className="font-mono text-neon-indigo">{selectedConversion.key_signature}</span>
-          </div>
-        )}
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2" data-testid="user-menu-btn">
-              <Avatar className="w-8 h-8">
-                <AvatarImage src={user?.picture} />
-                <AvatarFallback className="bg-neon-indigo/20 text-neon-indigo text-sm">
-                  {user?.name?.[0] || "M"}
-                </AvatarFallback>
-              </Avatar>
-              <span className="hidden sm:inline text-sm text-slate-300">{user?.name}</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem className="text-slate-400">
-              {user?.email}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} data-testid="logout-btn">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </header>
+    <div className="min-h-screen bg-sonic-void" data-testid="converter-page">
+      <Navbar user={user} onLogout={handleLogout} />
 
       {/* Main Content - 3 Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 h-[calc(100vh-4rem)]">
@@ -273,9 +255,12 @@ export default function Dashboard({ user }) {
           <Card className="bg-slate-900/50 border-slate-800">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-heading flex items-center gap-2">
-                <Upload className="w-4 h-4 text-neon-indigo" />
-                Upload Music
+                <FileImage className="w-4 h-4 text-neon-indigo" />
+                Upload Sheet Music
               </CardTitle>
+              <p className="text-xs text-slate-500 mt-1">
+                Drag & drop your sheet music (PDF or image). Optional: MusicXML or MIDI.
+              </p>
             </CardHeader>
             <CardContent>
               <div
@@ -291,7 +276,7 @@ export default function Dashboard({ user }) {
                 <input
                   id="file-input"
                   type="file"
-                  accept=".mid,.midi,.xml,.musicxml,.mxl"
+                  accept=".pdf,.png,.jpg,.jpeg,.mid,.midi,.xml,.musicxml,.mxl"
                   onChange={handleFileInput}
                   className="hidden"
                   data-testid="file-input"
@@ -299,13 +284,15 @@ export default function Dashboard({ user }) {
                 {isUploading ? (
                   <Loader2 className="w-8 h-8 mx-auto text-neon-indigo animate-spin" />
                 ) : (
-                  <FileMusic className="w-8 h-8 mx-auto text-slate-500 mb-2" />
+                  <Upload className="w-8 h-8 mx-auto text-slate-500 mb-2" />
                 )}
                 <p className="text-sm text-slate-400 mt-2">
-                  {isUploading ? "Converting..." : "Drop MIDI or MusicXML file"}
+                  {isUploading ? "Converting..." : "Drop sheet music here"}
                 </p>
-                <p className="text-xs text-slate-600 mt-1">.mid, .midi, .xml, .musicxml</p>
               </div>
+              <p className="text-xs text-slate-600 mt-3 text-center">
+                Supported: PDF, PNG, JPG, MusicXML, MIDI
+              </p>
             </CardContent>
           </Card>
 
@@ -329,49 +316,63 @@ export default function Dashboard({ user }) {
               <ScrollArea className="h-full px-4 pb-4">
                 {conversions.length === 0 ? (
                   <p className="text-sm text-slate-500 text-center py-8">
-                    No files yet. Upload one to get started.
+                    No files yet. Upload sheet music to get started.
                   </p>
                 ) : (
                   <div className="space-y-2">
                     {conversions.map((conv) => (
                       <div
                         key={conv.conversion_id}
-                        className={`file-item p-3 rounded-lg cursor-pointer flex items-center gap-3 ${
+                        className={`file-item p-3 rounded-lg cursor-pointer group ${
                           selectedConversion?.conversion_id === conv.conversion_id
                             ? "bg-neon-indigo/10 border border-neon-indigo/30"
-                            : "hover:bg-slate-800/50"
+                            : "hover:bg-slate-800/50 border border-transparent"
                         }`}
                         onClick={() => setSelectedConversion(conv)}
                         data-testid={`file-item-${conv.conversion_id}`}
                       >
-                        <FileMusic className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{conv.filename}</p>
-                          <p className="text-xs text-slate-500 font-mono">
-                            {conv.key_signature || "Processing..."}
-                          </p>
+                        <div className="flex items-start gap-3">
+                          {getFileIcon(conv.file_type)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{conv.filename}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs font-mono text-neon-indigo">
+                                {conv.key_signature || "Processing..."}
+                              </span>
+                              <span className="text-xs text-slate-600">•</span>
+                              <span className="text-xs text-slate-500 uppercase">
+                                {conv.file_type}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 mt-1 text-xs text-slate-600">
+                              <Clock className="w-3 h-3" />
+                              {formatDate(conv.created_at)}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {conv.status === "processing" && (
+                              <Loader2 className="w-4 h-4 text-yellow-400 animate-spin" />
+                            )}
+                            {conv.status === "completed" && (
+                              <CheckCircle className="w-4 h-4 text-green-400" />
+                            )}
+                            {conv.status === "error" && (
+                              <AlertCircle className="w-4 h-4 text-red-400" />
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(conv.conversion_id);
+                              }}
+                              data-testid={`delete-file-${conv.conversion_id}`}
+                            >
+                              <Trash2 className="w-3 h-3 text-red-400" />
+                            </Button>
+                          </div>
                         </div>
-                        {conv.status === "processing" && (
-                          <Loader2 className="w-4 h-4 text-yellow-400 animate-spin" />
-                        )}
-                        {conv.status === "completed" && (
-                          <CheckCircle className="w-4 h-4 text-green-400" />
-                        )}
-                        {conv.status === "error" && (
-                          <AlertCircle className="w-4 h-4 text-red-400" />
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(conv.conversion_id);
-                          }}
-                          data-testid={`delete-file-${conv.conversion_id}`}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-400" />
-                        </Button>
                       </div>
                     ))}
                   </div>
@@ -393,7 +394,10 @@ export default function Dashboard({ user }) {
                 </CardTitle>
                 {selectedConversion && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-400">
+                    <span className="text-sm font-mono text-neon-indigo">
+                      {selectedConversion.key_signature}
+                    </span>
+                    <span className="text-xs text-slate-500">
                       {selectedConversion.time_signature} | {selectedConversion.tempo} BPM
                     </span>
                   </div>
@@ -404,8 +408,9 @@ export default function Dashboard({ user }) {
               <ScrollArea className="h-full px-4 pb-4">
                 {!selectedConversion ? (
                   <div className="flex flex-col items-center justify-center h-64 text-center">
-                    <Music className="w-12 h-12 text-slate-700 mb-4" />
-                    <p className="text-slate-400">Upload a file to see the Motesart numbers</p>
+                    <FileMusic className="w-12 h-12 text-slate-700 mb-4" />
+                    <p className="text-slate-400">Upload sheet music to see the Motesart numbers</p>
+                    <p className="text-sm text-slate-600 mt-2">Supports PDF, images, MusicXML, and MIDI</p>
                   </div>
                 ) : selectedConversion.status === "processing" ? (
                   <div className="flex flex-col items-center justify-center h-64">
@@ -631,13 +636,16 @@ export default function Dashboard({ user }) {
             </CardContent>
           </Card>
 
-          {/* Export */}
+          {/* Export & Share */}
           <Card className="bg-slate-900/50 border-slate-800">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-heading flex items-center gap-2">
                 <Download className="w-4 h-4 text-slate-400" />
-                Export
+                Export & Share
               </CardTitle>
+              <p className="text-xs text-slate-500 mt-1">
+                Perfect for lessons, practice, and study
+              </p>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-2">
@@ -654,22 +662,23 @@ export default function Dashboard({ user }) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleExport("text")}
-                  disabled={!selectedConversion}
-                  className="border-slate-700 hover:bg-slate-800"
-                  data-testid="export-text-btn"
-                >
-                  Text
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
                   onClick={() => handleExport("csv")}
                   disabled={!selectedConversion}
                   className="border-slate-700 hover:bg-slate-800"
                   data-testid="export-csv-btn"
                 >
                   CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrint}
+                  disabled={!selectedConversion}
+                  className="border-slate-700 hover:bg-slate-800"
+                  data-testid="print-btn"
+                >
+                  <Printer className="w-3 h-3 mr-1" />
+                  Print
                 </Button>
               </div>
             </CardContent>
