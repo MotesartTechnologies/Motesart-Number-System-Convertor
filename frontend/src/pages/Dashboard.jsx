@@ -44,8 +44,8 @@ const CONTENT_TYPES = {
 // Status labels and colors
 const STATUS_CONFIG = {
   uploaded: {
-    label: "Uploaded",
-    sublabel: "OMR coming in Phase 2",
+    label: "Uploaded – Phase 2",
+    sublabel: "Sheet music saved. OMR conversion not yet active.",
     color: "yellow",
     icon: Clock
   },
@@ -481,15 +481,23 @@ export default function Dashboard({ user }) {
                   </CardTitle>
                   <div className="text-right">
                     <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                      Status: Uploaded
+                      Uploaded – OMR Phase 2
                     </span>
-                    <p className="text-xs text-slate-500 mt-1">
-                      OMR conversion coming in Phase 2
-                    </p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
+                {/* Phase 2 Notice Banner */}
+                <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                  <p className="text-sm text-yellow-300 font-medium">
+                    Sheet music upload saved successfully!
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Full conversion from PDF/image (OMR) is a <strong className="text-yellow-400">Phase 2 feature</strong> and is not active yet.
+                    You can upload <strong className="text-neon-cyan">MusicXML</strong> or <strong className="text-neon-cyan">MIDI</strong> for instant Motesart conversion.
+                  </p>
+                </div>
+                
                 <div className="aspect-[4/3] rounded-lg bg-slate-800/50 border border-slate-700 flex items-center justify-center overflow-hidden">
                   {selectedConversion.file_type === "pdf" ? (
                     <iframe
@@ -506,7 +514,7 @@ export default function Dashboard({ user }) {
                   )}
                 </div>
                 <p className="text-xs text-slate-500 mt-3 text-center">
-                  Your file is uploaded and saved. OMR conversion to Motesart numbers coming in Phase 2.
+                  Your file is securely saved and will be convertible when OMR launches.
                 </p>
               </CardContent>
             </Card>
@@ -544,11 +552,14 @@ export default function Dashboard({ user }) {
                     </p>
                   </div>
                 ) : selectedConversion.status === "uploaded" ? (
-                  <div className="flex flex-col items-center justify-center h-64 text-center">
+                  <div className="flex flex-col items-center justify-center h-64 text-center px-6">
                     <FileImage className="w-12 h-12 text-yellow-500/50 mb-4" />
-                    <p className="text-slate-400">Original file stored</p>
-                    <p className="text-sm text-slate-600 mt-2">
-                      OMR conversion coming in Phase 2
+                    <p className="text-slate-300 font-medium">Sheet Music Saved</p>
+                    <p className="text-sm text-yellow-400 mt-2 font-medium">
+                      OMR conversion is a Phase 2 feature (not yet active)
+                    </p>
+                    <p className="text-xs text-slate-500 mt-2 max-w-xs">
+                      Upload <span className="text-neon-cyan">MusicXML</span> or <span className="text-neon-cyan">MIDI</span> files for instant Motesart conversion.
                     </p>
                   </div>
                 ) : selectedConversion.status === "processing" || selectedConversion.status === "converting_ocr" || selectedConversion.status === "converting_motesart" ? (
