@@ -1,34 +1,140 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* Main App Styles - Motesart Number Converter */
+
+/* Hero section background overlay */
+.hero-overlay {
+    background: linear-gradient(to bottom right, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.1), transparent);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+/* Card hover effects */
+.card-hover {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 40px -10px rgba(99, 102, 241, 0.2);
 }
 
-.App-link {
-    color: #61dafb;
+/* Upload zone styling */
+.upload-zone {
+    border: 2px dashed hsl(var(--border));
+    transition: border-color 0.3s ease, background-color 0.3s ease;
 }
 
-@keyframes App-logo-spin {
+.upload-zone:hover,
+.upload-zone.drag-over {
+    border-color: hsl(var(--primary));
+    background-color: hsl(var(--primary) / 0.05);
+}
+
+/* Piano roll visualization */
+.piano-roll {
+    background: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 49px,
+        hsl(var(--border)) 49px,
+        hsl(var(--border)) 50px
+    );
+}
+
+/* Measure grid */
+.measure-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: hsl(var(--border));
+}
+
+.measure-cell {
+    background: hsl(var(--card));
+    min-height: 60px;
+    padding: 8px;
+}
+
+/* Explain panel glow effect */
+.explain-panel {
+    position: relative;
+    overflow: hidden;
+}
+
+.explain-panel::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+        from 0deg,
+        transparent,
+        rgba(99, 102, 241, 0.1) 60deg,
+        transparent 120deg
+    );
+    animation: rotate-glow 8s linear infinite;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.explain-panel:hover::before {
+    opacity: 1;
+}
+
+@keyframes rotate-glow {
     from {
         transform: rotate(0deg);
     }
     to {
         transform: rotate(360deg);
+    }
+}
+
+/* File list item */
+.file-item {
+    transition: background-color 0.2s ease;
+}
+
+.file-item:hover {
+    background-color: hsl(var(--muted) / 0.5);
+}
+
+/* Status badges */
+.status-processing {
+    @apply bg-yellow-500/20 text-yellow-400 border-yellow-500/30;
+}
+
+.status-completed {
+    @apply bg-green-500/20 text-green-400 border-green-500/30;
+}
+
+.status-error {
+    @apply bg-red-500/20 text-red-400 border-red-500/30;
+}
+
+/* Tooltip styling */
+.note-tooltip {
+    @apply absolute z-50 px-3 py-2 text-sm rounded-lg;
+    @apply bg-slate-800 border border-slate-700 shadow-xl;
+    transform: translateX(-50%);
+}
+
+/* Loading skeleton pulse */
+.skeleton-pulse {
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+    background: linear-gradient(
+        90deg,
+        hsl(var(--muted)) 0%,
+        hsl(var(--muted) / 0.5) 50%,
+        hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
     }
 }
