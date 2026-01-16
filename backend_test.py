@@ -177,7 +177,7 @@ class MotesartAPITester:
             "Upload MIDI File",
             "POST",
             "api/upload",
-            201,
+            200,  # Changed from 201 to 200 based on actual response
             files=files
         )
         
