@@ -449,15 +449,7 @@ export default function Dashboard({ user }) {
               </CardContent>
             </Card>
           )}
-                  </div>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Center Column - Motesart Numbers */}
-        <div className="lg:col-span-6 space-y-4 overflow-hidden flex flex-col">
           {/* Numbers View */}
           <Card className="bg-slate-900/50 border-slate-800 flex-1 overflow-hidden flex flex-col">
             <CardHeader className="pb-3">
