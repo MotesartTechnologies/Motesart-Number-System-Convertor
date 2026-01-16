@@ -588,9 +588,9 @@ startxref
         return True
 
     def run_all_tests(self):
-        """Run comprehensive test suite for Iteration 3"""
-        print("🚀 Starting Motesart API Test Suite (Iteration 3)")
-        print("Testing updated methodology and PDF/image upload fix")
+        """Run comprehensive test suite for Iteration 4"""
+        print("🚀 Starting Motesart API Test Suite (Iteration 4)")
+        print("Testing status flow improvements, branded templates, and file type support")
         print(f"Backend URL: {self.base_url}")
         print("=" * 60)
         
@@ -604,7 +604,7 @@ startxref
         # Test authenticated endpoints
         auth_me_ok = self.test_auth_endpoints()
         
-        # Test file uploads (main focus of this iteration)
+        # Test file uploads with proper status flow
         pdf_upload_ok = self.test_pdf_upload()
         image_upload_ok = self.test_image_upload()
         midi_upload_ok = self.test_midi_upload()
@@ -615,9 +615,11 @@ startxref
         # Test conversions list shows files with correct status
         conversions_list_ok = self.test_conversions_list()
         
+        # Test branded export functionality
+        export_ok = self.test_export_endpoints()
+        
         # Test other endpoints
         explain_ok = self.test_explain_endpoint()
-        export_ok = self.test_export_endpoints()
         
         # Test invalid cases
         invalid_ok = self.test_invalid_endpoints()
@@ -628,11 +630,13 @@ startxref
         
         # Specific results for this iteration's focus
         print("\n🎯 Key Features Tested:")
-        print(f"   PDF Upload & Storage: {'✅' if pdf_upload_ok else '❌'}")
-        print(f"   Image Upload & Storage: {'✅' if image_upload_ok else '❌'}")
-        print(f"   MIDI Conversion (still works): {'✅' if midi_upload_ok else '❌'}")
-        print(f"   File Retrieval: {'✅' if file_retrieval_ok else '❌'}")
-        print(f"   Recent Files List: {'✅' if conversions_list_ok else '❌'}")
+        print(f"   Health Check: {'✅' if health_ok else '❌'}")
+        print(f"   User Registration: {'✅' if register_ok else '❌'}")
+        print(f"   PDF Upload (uploaded status): {'✅' if pdf_upload_ok else '❌'}")
+        print(f"   Image Upload (uploaded status): {'✅' if image_upload_ok else '❌'}")
+        print(f"   MIDI Upload (completed status): {'✅' if midi_upload_ok else '❌'}")
+        print(f"   Conversions History: {'✅' if conversions_list_ok else '❌'}")
+        print(f"   Branded Export Templates: {'✅' if export_ok else '❌'}")
         
         if self.tests_passed == self.tests_run:
             print("🎉 All tests passed!")
