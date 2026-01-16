@@ -262,7 +262,9 @@ class MotesartAPITester:
             200,
             data=login_data
         )
-            print("   Skipping upload test - no valid session")
+        
+        if not login_success:
+            print("   Skipping upload test - login failed")
             return False
         
         # Create a simple test MIDI file (minimal valid MIDI)
