@@ -331,7 +331,9 @@ class MotesartAPITester:
             return 1
 
 def main():
-    tester = MotesartAPITester()
+    # Use the session token from MongoDB
+    session_token = "test_session_1768542692202"  # From MongoDB creation
+    tester = MotesartAPITester(session_token=session_token)
     return tester.run_all_tests()
 
 if __name__ == "__main__":
