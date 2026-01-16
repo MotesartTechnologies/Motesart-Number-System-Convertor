@@ -216,13 +216,8 @@ class MotesartAPITester:
                 200
             )
             
-            # Test delete conversion
-            success, data = self.run_api_test(
-                "Delete Conversion",
-                "DELETE",
-                f"api/conversions/{conversion_id}",
-                200
-            )
+            # Don't delete yet - save for explain/export tests
+            self.test_conversion_id = conversion_id
         else:
             print("   No conversions found to test specific endpoints")
         
