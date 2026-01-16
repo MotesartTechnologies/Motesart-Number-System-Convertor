@@ -95,8 +95,8 @@ export default function Dashboard({ user }) {
     showRomanNumerals: false,
   });
 
-  // Fetch conversions
-  const fetchConversions = useCallback(async () => {
+  // Fetch conversions - always refresh on mount
+  const fetchConversions = useCallback(async (selectFirst = false) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/conversions`, {
         credentials: "include",
@@ -104,17 +104,19 @@ export default function Dashboard({ user }) {
       if (response.ok) {
         const data = await response.json();
         setConversions(data);
-        if (data.length > 0 && !selectedConversion) {
+        // Select first conversion if requested or if none selected yet
+        if (selectFirst && data.length > 0) {
           setSelectedConversion(data[0]);
         }
       }
     } catch (error) {
       console.error("Failed to fetch conversions:", error);
     }
-  }, [selectedConversion]);
+  }, []);
 
+  // Fetch on mount - always refresh
   useEffect(() => {
-    fetchConversions();
+    fetchConversions(true);
   }, [fetchConversions]);
 
   // Handle file upload
@@ -130,6 +132,8 @@ export default function Dashboard({ user }) {
     }
 
     setIsUploading(true);
+    // Clear the old explanation when uploading new file
+    setExplanation("");
 
     try {
       const formData = new FormData();
