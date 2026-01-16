@@ -284,37 +284,27 @@ export default function Dashboard({ user }) {
     return <FileText className="w-4 h-4 text-neon-cyan" />;
   };
 
-  // Get status badge
-  const getStatusBadge = (status, isSheetMusic) => {
-    if (status === "uploaded" && isSheetMusic) {
-      return (
-        <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-          Uploaded
-        </span>
-      );
-    }
-    if (status === "processing") {
-      return (
-        <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-          Processing
-        </span>
-      );
-    }
-    if (status === "completed") {
-      return (
-        <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
-          Converted
-        </span>
-      );
-    }
-    if (status === "error") {
-      return (
-        <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
-          Error
-        </span>
-      );
-    }
-    return null;
+  // Get status badge with proper styling based on STATUS_CONFIG
+  const getStatusBadge = (status) => {
+    const config = STATUS_CONFIG[status] || STATUS_CONFIG.processing;
+    const colorClasses = {
+      yellow: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+      blue: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+      green: "bg-green-500/20 text-green-400 border-green-500/30",
+      red: "bg-red-500/20 text-red-400 border-red-500/30"
+    };
+    
+    return (
+      <span className={`text-xs px-2 py-0.5 rounded border ${colorClasses[config.color]}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  // Get status detail text
+  const getStatusDetail = (status) => {
+    const config = STATUS_CONFIG[status];
+    return config ? config.sublabel : "";
   };
 
   // Format date
