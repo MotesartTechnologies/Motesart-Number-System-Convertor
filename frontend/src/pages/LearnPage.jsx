@@ -36,6 +36,28 @@ const HALF_NUMBERS = [
   { symbol: "6½", meaning: "Raised 6th / minor 7th", example: "Dominant 7th chord" },
 ];
 
+// Extensions (Section 5) - These don't introduce new numbers
+const EXTENSIONS = [
+  { symbol: "2⁹", meaning: "2 as a 9th extension", example: "Upper-structure color" },
+  { symbol: "4¹¹", meaning: "4 as an 11th extension", example: "Sus4 tension" },
+  { symbol: "6¹³", meaning: "6 as a 13th extension", example: "Rich jazz voicing" },
+];
+
+// Updated symbol legend per methodology document
+const SYMBOL_LEGEND = [
+  { symbol: "m", meaning: "Minor chord", color: "neon-cyan" },
+  { symbol: "M", meaning: "Non-diatonic major", color: "neon-indigo" },
+  { symbol: "⁺", meaning: "Augmented chord", color: "green-400" },
+  { symbol: "°", meaning: "Diminished chord", color: "orange-400" },
+  { symbol: "ø⁷", meaning: "Half-diminished 7th", color: "orange-400" },
+  { symbol: "sus²", meaning: "Suspended 2nd", color: "yellow-400" },
+  { symbol: "sus⁴", meaning: "Suspended 4th", color: "yellow-400" },
+  { symbol: "⁷", meaning: "Seventh chord", color: "neon-purple" },
+  { symbol: "/X", meaning: "Bass note (X in bass)", color: "neon-pink" },
+  { symbol: "½", meaning: "Chromatic step up", color: "neon-cyan" },
+  { symbol: "² ³", meaning: "Inversion markers (optional)", color: "slate-300" },
+];
+
 export default function LearnPage() {
   return (
     <div className="min-h-screen bg-sonic-void">
