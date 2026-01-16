@@ -1310,7 +1310,7 @@ async def export_conversion(
             pdf.set_font("Helvetica", "B", 13)
             pdf.cell(0, 10, "All Chords", ln=True)
             pdf.set_font("Courier", "", 10)
-            chord_line = " | ".join([c.get("symbol", "") for c in all_chords[:30]])
+            chord_line = " | ".join([pdf_safe(c.get("symbol", "")) for c in all_chords[:30]])
             pdf.multi_cell(0, 6, chord_line)
         
         # Progressions Detected
@@ -1321,9 +1321,11 @@ async def export_conversion(
             pdf.cell(0, 10, "Progressions Detected", ln=True)
             pdf.set_font("Helvetica", "", 11)
             for prog in progressions:
-                pdf.cell(0, 7, f"• {prog.get('name')}: {prog.get('description', '')}", ln=True)
+                prog_name = pdf_safe(prog.get('name', ''))
+                prog_desc = pdf_safe(prog.get('description', ''))
+                pdf.cell(0, 7, f"- {prog_name}: {prog_desc}", ln=True)
         
-        # Footer Legend
+        # Footer Legend (ASCII-safe)
         pdf.ln(10)
         pdf.set_font("Helvetica", "I", 8)
         pdf.set_text_color(80, 80, 80)
@@ -1340,9 +1342,9 @@ async def export_conversion(
         )
     
     else:
-        # Generate Text/Markdown with branded template
+        # Generate Text/Markdown with branded template (can use rich characters)
         lines = [
-            branded_header,
+            branded_header_rich,
             "=" * len(branded_header),
             "",
             f"# {title}",
