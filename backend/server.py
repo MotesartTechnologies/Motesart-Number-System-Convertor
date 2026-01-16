@@ -1400,10 +1400,21 @@ async def health_check():
 # Include router
 app.include_router(api_router)
 
+# CORS configuration - when credentials are used, specific origins must be listed
+cors_origins_env = os.environ.get('CORS_ORIGINS', '*')
+if cors_origins_env == '*':
+    # If wildcard, expand to common origins for this app
+    allowed_origins = [
+        "http://localhost:3000",
+        "https://music-numbers.preview.emergentagent.com",
+    ]
+else:
+    allowed_origins = cors_origins_env.split(',')
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
