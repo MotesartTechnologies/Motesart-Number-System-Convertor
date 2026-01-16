@@ -198,6 +198,92 @@ async def logout(request: Request, response: Response):
     response.delete_cookie(key="session_token", path="/", secure=True, samesite="none")
     return {"message": "Logged out successfully"}
 
+@api_router.post("/auth/register")
+async def register_email(req: EmailRegisterRequest, response: Response):
+    """Register with email and password"""
+    # Check if email already exists
+    existing_user = await db.users.find_one({"email": req.email}, {"_id": 0})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create user
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    hashed_pw = hash_password(req.password)
+    
+    await db.users.insert_one({
+        "user_id": user_id,
+        "email": req.email,
+        "name": req.name,
+        "password_hash": hashed_pw,
+        "auth_type": "email",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Create session
+    session_token = f"st_{uuid.uuid4().hex}"
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    
+    await db.user_sessions.insert_one({
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7 * 24 * 60 * 60
+    )
+    
+    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    return user_doc
+
+@api_router.post("/auth/login")
+async def login_email(req: EmailLoginRequest, response: Response):
+    """Login with email and password"""
+    user_doc = await db.users.find_one({"email": req.email}, {"_id": 0})
+    
+    if not user_doc:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Check if this is an email-auth user
+    if not user_doc.get("password_hash"):
+        raise HTTPException(status_code=401, detail="Please use Google login for this account")
+    
+    if not verify_password(req.password, user_doc["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Create session
+    session_token = f"st_{uuid.uuid4().hex}"
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    
+    await db.user_sessions.delete_many({"user_id": user_doc["user_id"]})
+    await db.user_sessions.insert_one({
+        "user_id": user_doc["user_id"],
+        "session_token": session_token,
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7 * 24 * 60 * 60
+    )
+    
+    # Remove password_hash from response
+    user_doc.pop("password_hash", None)
+    return user_doc
+
 # ==================== MOTESART CONVERSION LOGIC ====================
 
 # Scale degree mapping (semitones from root)
