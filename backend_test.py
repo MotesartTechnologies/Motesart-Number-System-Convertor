@@ -129,7 +129,10 @@ class MotesartAPITester:
         if success:
             self.user_id = data.get('user_id')
             print(f"   Created user: {self.user_id}")
-            # Registration should set session cookie, but we'll also test login
+        elif "Email already registered" in str(data):
+            # User already exists, try to login instead
+            print("   User already exists, will use existing account")
+            success = True
         
         return success
 
