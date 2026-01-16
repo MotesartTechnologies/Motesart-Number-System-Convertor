@@ -292,37 +292,6 @@ export default function LearnPage() {
             </CardContent>
           </Card>
         </section>
-                  <div className="font-mono text-lg text-neon-indigo mb-1">M</div>
-                  <div className="text-sm text-slate-400">Non-diatonic major</div>
-                </div>
-                <div>
-                  <div className="font-mono text-lg text-neon-purple mb-1">7</div>
-                  <div className="text-sm text-slate-400">Seventh chord (5⁷ = dominant 7)</div>
-                </div>
-                <div>
-                  <div className="font-mono text-lg text-neon-pink mb-1">/3</div>
-                  <div className="text-sm text-slate-400">Bass inversion (1/3 = 1 chord, 3 in bass)</div>
-                </div>
-                <div>
-                  <div className="font-mono text-lg text-orange-400 mb-1">°</div>
-                  <div className="text-sm text-slate-400">Diminished chord</div>
-                </div>
-                <div>
-                  <div className="font-mono text-lg text-green-400 mb-1">+</div>
-                  <div className="text-sm text-slate-400">Augmented chord</div>
-                </div>
-                <div>
-                  <div className="font-mono text-lg text-yellow-400 mb-1">sus2/sus4</div>
-                  <div className="text-sm text-slate-400">Suspended chords</div>
-                </div>
-                <div>
-                  <div className="font-mono text-lg text-slate-300 mb-1">↑ ↓</div>
-                  <div className="text-sm text-slate-400">Octave markers (optional)</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
 
         {/* CTA */}
         <section className="text-center">
