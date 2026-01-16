@@ -244,10 +244,24 @@ class MotesartAPITester:
         )
         
         return success and success2
+
+    def test_upload_endpoint(self):
         """Test file upload endpoint"""
         print("\n🔍 Testing Upload Endpoint...")
         
-        if not self.session_token:
+        # Need to login again after logout test
+        login_data = {
+            "email": self.test_user_email,
+            "password": self.test_user_password
+        }
+        
+        login_success, data = self.run_api_test(
+            "Re-login for Upload Test",
+            "POST",
+            "api/auth/login",
+            200,
+            data=login_data
+        )
             print("   Skipping upload test - no valid session")
             return False
         
