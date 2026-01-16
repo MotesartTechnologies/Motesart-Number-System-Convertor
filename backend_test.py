@@ -12,9 +12,9 @@ from datetime import datetime
 from pathlib import Path
 
 class MotesartAPITester:
-    def __init__(self, base_url="https://music-to-numbers.preview.emergentagent.com"):
+    def __init__(self, base_url="https://music-to-numbers.preview.emergentagent.com", session_token=None):
         self.base_url = base_url
-        self.session_token = None
+        self.session_token = session_token
         self.user_id = None
         self.tests_run = 0
         self.tests_passed = 0
