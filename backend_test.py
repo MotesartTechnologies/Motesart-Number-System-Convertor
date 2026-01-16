@@ -105,30 +105,107 @@ class MotesartAPITester:
         )
         return success
 
-    def create_test_user_session(self):
-        """Create test user and session in MongoDB for testing"""
-        print("\n🔍 Creating Test User Session...")
+    def test_email_registration(self):
+        """Test email registration endpoint"""
+        print("\n🔍 Testing Email Registration...")
         
-        # This would normally be done via the auth flow, but for testing we'll create directly
-        # In a real scenario, we'd use the session_id from auth.emergentagent.com
+        register_data = {
+            "name": "Test User",
+            "email": self.test_user_email,
+            "password": self.test_user_password
+        }
         
-        # For now, let's try to use the /api/auth/me endpoint to see if there's an existing session
         success, data = self.run_api_test(
-            "Check Existing Session",
-            "GET", 
-            "api/auth/me",
-            200
+            "Email Registration",
+            "POST",
+            "api/auth/register",
+            200,
+            data=register_data
         )
         
         if success:
             self.user_id = data.get('user_id')
-            print(f"   Found existing user: {self.user_id}")
-            return True
+            print(f"   Created user: {self.user_id}")
+            # Registration should set session cookie, but we'll also test login
         
-        # If no existing session, we need to create one via the auth flow
-        # For testing purposes, we'll skip this and note it as a limitation
-        print("   No existing session found - would need auth flow for full testing")
-        return False
+        return success
+
+    def test_email_login(self):
+        """Test email login endpoint"""
+        print("\n🔍 Testing Email Login...")
+        
+        login_data = {
+            "email": self.test_user_email,
+            "password": self.test_user_password
+        }
+        
+        success, data = self.run_api_test(
+            "Email Login",
+            "POST",
+            "api/auth/login",
+            200,
+            data=login_data
+        )
+        
+        if success:
+            self.user_id = data.get('user_id')
+            print(f"   Logged in user: {self.user_id}")
+        
+        return success
+
+    def test_duplicate_registration(self):
+        """Test duplicate email registration (should fail)"""
+        print("\n🔍 Testing Duplicate Registration...")
+        
+        register_data = {
+            "name": "Test User 2",
+            "email": self.test_user_email,  # Same email
+            "password": "AnotherPass123!"
+        }
+        
+        success, data = self.run_api_test(
+            "Duplicate Email Registration (Should Fail)",
+            "POST",
+            "api/auth/register",
+            400,  # Should return 400 for duplicate email
+            data=register_data
+        )
+        
+        return success
+
+    def test_invalid_login(self):
+        """Test login with invalid credentials"""
+        print("\n🔍 Testing Invalid Login...")
+        
+        # Test wrong password
+        login_data = {
+            "email": self.test_user_email,
+            "password": "WrongPassword123!"
+        }
+        
+        success, data = self.run_api_test(
+            "Invalid Password Login (Should Fail)",
+            "POST",
+            "api/auth/login",
+            401,  # Should return 401 for invalid credentials
+            data=login_data
+        )
+        
+        # Test non-existent email
+        login_data = {
+            "email": "nonexistent@example.com",
+            "password": "SomePassword123!"
+        }
+        
+        success2, data = self.run_api_test(
+            "Non-existent Email Login (Should Fail)",
+            "POST",
+            "api/auth/login",
+            401,  # Should return 401 for invalid credentials
+            data=login_data
+        )
+        
+        return success and success2
 
     def test_auth_endpoints(self):
         """Test authentication endpoints"""
