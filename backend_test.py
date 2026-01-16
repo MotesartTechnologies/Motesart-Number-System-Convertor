@@ -329,6 +329,9 @@ class MotesartAPITester:
         # Test invalid cases
         self.test_invalid_endpoints()
         
+        # Clean up test data
+        self.test_cleanup()
+        
         # Print summary
         print("\n" + "=" * 60)
         print(f"📊 Test Results: {self.tests_passed}/{self.tests_run} passed")
