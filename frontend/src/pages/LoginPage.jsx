@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Music, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 const AUTH_BG = "https://images.unsplash.com/photo-1643240150427-3caac2c0cf05?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwzfHxtdXNpY2lhbiUyMHByb2R1Y2luZyUyMG11c2ljJTIwaW4lMjBkYXJrJTIwc3R1ZGlvfGVufDB8fHx8MTc2ODU0MjE2NXww&ixlib=rb-4.1.0&q=85";
+
+// Motesart Logo URL (C → 1 concept)
+const MOTESART_LOGO = "https://customer-assets.emergentagent.com/job_music-to-numbers/artifacts/eqmmw6fl_2316F097-7806-4D1F-AB36-BB5FF560800D.png";
 
 export default function LoginPage() {
   const navigate = useNavigate();
