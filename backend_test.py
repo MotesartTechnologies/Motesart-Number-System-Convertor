@@ -332,8 +332,8 @@ class MotesartAPITester:
         """Test AI explanation endpoint"""
         print("\n🔍 Testing Explain Endpoint...")
         
-        if not self.session_token or not hasattr(self, 'test_conversion_id'):
-            print("   Skipping explain test - no valid session or conversion")
+        if not hasattr(self, 'test_conversion_id'):
+            print("   Skipping explain test - no conversion available")
             return False
         
         explain_data = {
