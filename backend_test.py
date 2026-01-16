@@ -224,7 +224,26 @@ class MotesartAPITester:
         
         return success
 
-    def test_upload_endpoint(self):
+    def test_logout(self):
+        """Test logout endpoint"""
+        print("\n🔍 Testing Logout...")
+        
+        success, data = self.run_api_test(
+            "Logout",
+            "POST",
+            "api/auth/logout",
+            200
+        )
+        
+        # After logout, /api/auth/me should fail
+        success2, data = self.run_api_test(
+            "Auth Me After Logout (Should Fail)",
+            "GET",
+            "api/auth/me",
+            401  # Should return 401 after logout
+        )
+        
+        return success and success2
         """Test file upload endpoint"""
         print("\n🔍 Testing Upload Endpoint...")
         
