@@ -349,9 +349,11 @@ export default function LandingPage() {
       <footer className="py-12 px-6 border-t border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-neon-indigo/20 border border-neon-indigo/50 flex items-center justify-center">
-              <Music className="w-4 h-4 text-neon-indigo" />
-            </div>
+            <img 
+              src={MOTESART_LOGO} 
+              alt="Motesart" 
+              className="w-8 h-8 rounded-lg object-cover"
+            />
             <span className="font-heading font-semibold">Motesart Converter</span>
           </div>
           <p className="text-sm text-slate-500">
