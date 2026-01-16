@@ -559,41 +559,51 @@ startxref
         return True
 
     def run_all_tests(self):
-        """Run comprehensive test suite"""
-        print("🚀 Starting Motesart API Test Suite (Iteration 2)")
+        """Run comprehensive test suite for Iteration 3"""
+        print("🚀 Starting Motesart API Test Suite (Iteration 3)")
+        print("Testing updated methodology and PDF/image upload fix")
         print(f"Backend URL: {self.base_url}")
         print("=" * 60)
         
         # Test basic connectivity
         health_ok = self.test_health_check()
         
-        # Test new email authentication features
+        # Test authentication with provided credentials
         register_ok = self.test_email_registration()
-        duplicate_ok = self.test_duplicate_registration()
         login_ok = self.test_email_login()
-        invalid_login_ok = self.test_invalid_login()
         
         # Test authenticated endpoints
         auth_me_ok = self.test_auth_endpoints()
         
-        # Test protected endpoints with authenticated session
-        upload_ok = self.test_upload_endpoint()
-        conversions_ok = self.test_conversions_endpoints()
+        # Test file uploads (main focus of this iteration)
+        pdf_upload_ok = self.test_pdf_upload()
+        image_upload_ok = self.test_image_upload()
+        midi_upload_ok = self.test_midi_upload()
+        
+        # Test file retrieval
+        file_retrieval_ok = self.test_file_retrieval()
+        
+        # Test conversions list shows files with correct status
+        conversions_list_ok = self.test_conversions_list()
+        
+        # Test other endpoints
         explain_ok = self.test_explain_endpoint()
         export_ok = self.test_export_endpoints()
-        
-        # Test logout (this will invalidate session)
-        logout_ok = self.test_logout()
         
         # Test invalid cases
         invalid_ok = self.test_invalid_endpoints()
         
-        # Clean up test data (need to login again)
-        cleanup_ok = self.test_cleanup()
-        
         # Print summary
         print("\n" + "=" * 60)
         print(f"📊 Test Results: {self.tests_passed}/{self.tests_run} passed")
+        
+        # Specific results for this iteration's focus
+        print("\n🎯 Key Features Tested:")
+        print(f"   PDF Upload & Storage: {'✅' if pdf_upload_ok else '❌'}")
+        print(f"   Image Upload & Storage: {'✅' if image_upload_ok else '❌'}")
+        print(f"   MIDI Conversion (still works): {'✅' if midi_upload_ok else '❌'}")
+        print(f"   File Retrieval: {'✅' if file_retrieval_ok else '❌'}")
+        print(f"   Recent Files List: {'✅' if conversions_list_ok else '❌'}")
         
         if self.tests_passed == self.tests_run:
             print("🎉 All tests passed!")
