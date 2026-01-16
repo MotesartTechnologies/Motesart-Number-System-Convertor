@@ -497,7 +497,7 @@ export default function Dashboard({ user }) {
             </Card>
           )}
 
-          {/* Numbers View */}
+          {/* Numbers View - Branded Motesart Template */}
           <Card className="bg-slate-900/50 border-slate-800 flex-1 overflow-hidden flex flex-col">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -505,7 +505,7 @@ export default function Dashboard({ user }) {
                   <Eye className="w-4 h-4 text-neon-cyan" />
                   Motesart View
                 </CardTitle>
-                {selectedConversion && (
+                {selectedConversion && selectedConversion.status === "completed" && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-mono text-neon-indigo">
                       {selectedConversion.key_signature}
@@ -513,6 +513,7 @@ export default function Dashboard({ user }) {
                     <span className="text-xs text-slate-500">
                       {selectedConversion.time_signature} | {selectedConversion.tempo} BPM
                     </span>
+                    {getStatusBadge(selectedConversion.status)}
                   </div>
                 )}
               </div>
@@ -523,16 +524,45 @@ export default function Dashboard({ user }) {
                   <div className="flex flex-col items-center justify-center h-64 text-center">
                     <FileMusic className="w-12 h-12 text-slate-700 mb-4" />
                     <p className="text-slate-400">Upload sheet music to see the Motesart numbers</p>
-                    <p className="text-sm text-slate-600 mt-2">Supports PDF, images, MusicXML, and MIDI</p>
+                    <p className="text-sm text-slate-600 mt-2">
+                      Supports: Traditional scores, Chord charts, Hymnals, Lead sheets
+                    </p>
                   </div>
-                ) : selectedConversion.status === "processing" ? (
+                ) : selectedConversion.status === "uploaded" ? (
+                  <div className="flex flex-col items-center justify-center h-64 text-center">
+                    <FileImage className="w-12 h-12 text-yellow-500/50 mb-4" />
+                    <p className="text-slate-400">Original file stored</p>
+                    <p className="text-sm text-slate-600 mt-2">
+                      OMR conversion coming in Phase 2
+                    </p>
+                  </div>
+                ) : selectedConversion.status === "processing" || selectedConversion.status === "converting_ocr" || selectedConversion.status === "converting_motesart" ? (
                   <div className="flex flex-col items-center justify-center h-64">
                     <Loader2 className="w-8 h-8 text-neon-indigo animate-spin mb-4" />
-                    <p className="text-slate-400">Converting...</p>
+                    <p className="text-slate-400">{getStatusDetail(selectedConversion.status)}</p>
                   </div>
-                ) : (
+                ) : selectedConversion.status === "completed" ? (
                   <div className="space-y-4">
-                    {/* Sections with measures */}
+                    {/* Branded Header */}
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-neon-indigo/10 to-neon-purple/10 border border-neon-indigo/30">
+                      <div className="flex items-center gap-3">
+                        <img src={MOTESART_LOGO} alt="Motesart" className="w-10 h-10 rounded" />
+                        <div>
+                          <p className="text-xs text-slate-400">Converted by Motesart Technologies</p>
+                          <p className="font-heading font-semibold">
+                            {selectedConversion.title || selectedConversion.filename?.split('.')[0]}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-mono text-lg text-neon-indigo">{selectedConversion.key_signature}</p>
+                        <p className="text-xs text-slate-500">
+                          {CONTENT_TYPES[selectedConversion.content_type] || "Music File"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Sections with chords/progressions */}
                     {selectedConversion.sections?.map((section, sIdx) => (
                       <div
                         key={sIdx}
@@ -540,44 +570,128 @@ export default function Dashboard({ user }) {
                         data-testid={`section-${sIdx}`}
                       >
                         <div className="flex items-center justify-between mb-3">
-                          <span className="text-sm font-medium text-slate-300">
+                          <span className="text-sm font-heading font-semibold text-slate-200">
                             {section.name}
                           </span>
-                          <span className="text-xs text-slate-500">
-                            Measures {section.start_measure}-{section.end_measure}
-                          </span>
+                          {section.start_measure && (
+                            <span className="text-xs text-slate-500">
+                              Measures {section.start_measure}-{section.end_measure}
+                            </span>
+                          )}
                         </div>
 
-                        {/* Notes in measure grid */}
-                        <div className="measure-grid rounded-lg overflow-hidden">
-                          {Array.from({ length: 4 }).map((_, mIdx) => {
-                            const measureNum = section.start_measure + mIdx;
-                            const measureNotes = selectedConversion.notes?.filter(
-                              (n) => Math.floor(n.beat / 4) + 1 === measureNum
-                            );
-                            const measureChords = selectedConversion.chords?.filter(
-                              (c) => c.measure === measureNum
-                            );
+                        {/* Chord progression line */}
+                        {section.progression && (
+                          <div className="mb-3 p-2 rounded bg-neon-indigo/10 border border-neon-indigo/20">
+                            <span className="font-mono text-neon-cyan">{section.progression}</span>
+                          </div>
+                        )}
 
-                            return (
-                              <div key={mIdx} className="measure-cell">
-                                <div className="text-xs text-slate-600 mb-1">M{measureNum}</div>
-                                {measureChords?.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mb-2">
-                                    {measureChords.map((chord, cIdx) => (
+                        {/* Individual chords in section */}
+                        {section.chords?.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {section.chords.map((chord, cIdx) => (
+                              <span
+                                key={cIdx}
+                                className="font-mono text-sm px-3 py-1.5 rounded-lg bg-neon-indigo/10 border border-neon-indigo/30 text-neon-indigo"
+                              >
+                                {chord.symbol}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Notes in measure grid (for traditional/MIDI) */}
+                        {!section.chords?.length && selectedConversion.notes?.length > 0 && (
+                          <div className="measure-grid rounded-lg overflow-hidden">
+                            {Array.from({ length: 4 }).map((_, mIdx) => {
+                              const measureNum = (section.start_measure || 1) + mIdx;
+                              const measureNotes = selectedConversion.notes?.filter(
+                                (n) => Math.floor(n.beat / 4) + 1 === measureNum
+                              );
+                              const measureChords = selectedConversion.chords?.filter(
+                                (c) => c.measure === measureNum
+                              );
+
+                              return (
+                                <div key={mIdx} className="measure-cell">
+                                  <div className="text-xs text-slate-600 mb-1">M{measureNum}</div>
+                                  {measureChords?.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mb-2">
+                                      {measureChords.map((chord, cIdx) => (
+                                        <span
+                                          key={cIdx}
+                                          className="motesart-chord text-sm px-2 py-0.5 rounded bg-neon-indigo/20"
+                                        >
+                                          {chord.symbol}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <div className="flex flex-wrap gap-1">
+                                    {measureNotes?.slice(0, 8).map((note, nIdx) => (
                                       <span
-                                        key={cIdx}
-                                        className="motesart-chord text-sm px-2 py-0.5 rounded bg-neon-indigo/20"
+                                        key={nIdx}
+                                        className="motesart-number"
+                                        title={`Pitch: ${note.pitch}, Beat: ${note.beat?.toFixed(2)}`}
                                       >
-                                        {chord.symbol}
+                                        {note.motesart_number}
                                       </span>
                                     ))}
                                   </div>
-                                )}
-                                <div className="flex flex-wrap gap-1">
-                                  {measureNotes?.slice(0, 8).map((note, nIdx) => (
-                                    <span
-                                      key={nIdx}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* All Chords Summary */}
+                    {selectedConversion.chords?.length > 0 && (
+                      <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-700/50">
+                        <h4 className="text-sm font-heading font-medium text-slate-300 mb-3">
+                          All Chords
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedConversion.chords.map((chord, idx) => (
+                            <span
+                              key={idx}
+                              className="font-mono text-sm px-3 py-1.5 rounded-lg bg-neon-indigo/10 border border-neon-indigo/30 text-neon-indigo"
+                            >
+                              {chord.symbol}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Symbol Legend Footer */}
+                    <div className="p-3 rounded-lg bg-slate-800/20 border border-slate-700/30">
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        <span className="font-semibold text-slate-400">Legend:</span>{" "}
+                        <span className="font-mono text-neon-pink">½</span> = chromatic step up |{" "}
+                        <span className="font-mono text-neon-cyan">/X</span> = bass first (slash) |{" "}
+                        <span className="font-mono">m</span> = minor |{" "}
+                        <span className="font-mono">M</span> = non-diatonic major |{" "}
+                        <span className="font-mono text-green-400">⁺</span> = augmented |{" "}
+                        <span className="font-mono text-orange-400">°</span> = diminished |{" "}
+                        <span className="font-mono text-neon-purple">2⁹ 4¹¹ 6¹³</span> = extensions
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-64 text-center">
+                    <AlertCircle className="w-12 h-12 text-red-500/50 mb-4" />
+                    <p className="text-slate-400">Conversion failed</p>
+                    <p className="text-sm text-red-400 mt-2">
+                      {selectedConversion.error_message || "Please try uploading again"}
+                    </p>
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
                                       className="motesart-number"
                                       title={`Pitch: ${note.pitch}, Beat: ${note.beat?.toFixed(2)}`}
                                     >
