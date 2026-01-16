@@ -422,7 +422,13 @@ export default function Dashboard({ user }) {
                             ? "bg-neon-indigo/10 border border-neon-indigo/30"
                             : "hover:bg-slate-800/50 border border-transparent"
                         }`}
-                        onClick={() => setSelectedConversion(conv)}
+                        onClick={() => {
+                          // Clear explanation when switching files
+                          if (selectedConversion?.conversion_id !== conv.conversion_id) {
+                            setExplanation("");
+                          }
+                          setSelectedConversion(conv);
+                        }}
                         data-testid={`file-item-${conv.conversion_id}`}
                       >
                         <div className="flex items-start gap-3">
