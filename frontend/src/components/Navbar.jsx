@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Music, Menu, X, User, LogOut } from "lucide-react";
+import { Menu, X, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,6 +12,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Motesart Logo URL (C → 1 concept)
+const MOTESART_LOGO = "https://customer-assets.emergentagent.com/job_music-to-numbers/artifacts/eqmmw6fl_2316F097-7806-4D1F-AB36-BB5FF560800D.png";
 
 const NAV_ITEMS = [
   { name: "Home", path: "/" },
@@ -33,11 +36,13 @@ export const Navbar = ({ user, onLogout }) => {
     <nav className="sticky top-0 z-50 bg-sonic-surface/80 backdrop-blur-xl border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+          {/* Logo with Motesart image */}
           <Link to="/" className="flex items-center gap-3" data-testid="nav-logo">
-            <div className="w-9 h-9 rounded-lg bg-neon-indigo/20 border border-neon-indigo/50 flex items-center justify-center">
-              <Music className="w-4 h-4 text-neon-indigo" />
-            </div>
+            <img 
+              src={MOTESART_LOGO} 
+              alt="Motesart" 
+              className="w-9 h-9 rounded-lg object-cover"
+            />
             <span className="font-heading font-semibold text-lg">Motesart Converter</span>
           </Link>
 
