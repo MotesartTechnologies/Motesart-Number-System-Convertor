@@ -1,11 +1,14 @@
 import { Link } from "react-router-dom";
-import { Music, Sparkles, FileMusic, Download, ArrowRight, Waves, BookOpen, ChevronRight, FileImage } from "lucide-react";
+import { Sparkles, FileMusic, Download, ArrowRight, Waves, BookOpen, ChevronRight, FileImage } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Navbar } from "@/components/Navbar";
 
 const HERO_BG = "https://images.unsplash.com/photo-1759771963975-8a4885446f1f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDF8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMG5lb24lMjBzb3VuZCUyMHdhdmVzJTIwZGFyayUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzY4NTQyMTYzfDA&ixlib=rb-4.1.0&q=85";
 const FEATURE_IMG = "https://images.unsplash.com/photo-1714123710240-974b15c86409?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwxfHxtdXNpY2lhbiUyMHByb2R1Y2luZyUyMG11c2ljJTIwaW4lMjBkYXJrJTIwc3R1ZGlvfGVufDB8fHx8MTc2ODU0MjE2NXww&ixlib=rb-4.1.0&q=85";
+
+// Motesart Logo URL (C → 1 concept)
+const MOTESART_LOGO = "https://customer-assets.emergentagent.com/job_music-to-numbers/artifacts/eqmmw6fl_2316F097-7806-4D1F-AB36-BB5FF560800D.png";
 
 export default function LandingPage() {
   return (
