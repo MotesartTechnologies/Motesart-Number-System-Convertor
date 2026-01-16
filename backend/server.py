@@ -57,8 +57,15 @@ class User(BaseModel):
     user_id: str
     email: str
     name: str
-    picture: Optional[str] = None
+    username: Optional[str] = None  # Display username (e.g., "Motesart" for founder)
+    picture: Optional[str] = None  # Google profile picture
+    avatar_url: Optional[str] = None  # Custom uploaded avatar
+    is_founder: bool = False  # Special flag for Motesart founder account
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class UpdateProfileRequest(BaseModel):
+    username: Optional[str] = None
+    name: Optional[str] = None
 
 class SessionData(BaseModel):
     user_id: str
@@ -102,6 +109,45 @@ class EmailRegisterRequest(BaseModel):
     name: str
     email: str
     password: str
+
+# ==================== AVATAR HELPERS ====================
+
+# Motesart founder special avatar
+MOTESART_FOUNDER_AVATAR = "https://customer-assets.emergentagent.com/job_music-to-numbers/artifacts/eqmmw6fl_2316F097-7806-4D1F-AB36-BB5FF560800D.png"
+MOTESART_FOUNDER_EMAIL = "motesartproductions@gmail.com"  # Update this to actual founder email
+
+def generate_avatar_url(name: str, user_id: str) -> str:
+    """
+    Generate a unique default avatar for a user based on their initials.
+    Uses DiceBear Avatars API for consistent, unique avatars.
+    """
+    # Get initials (up to 2 characters)
+    initials = "".join([word[0].upper() for word in name.split()[:2]]) if name else "U"
+    
+    # Use DiceBear initials avatar with user_id as seed for uniqueness
+    # This ensures each user gets a unique, consistent avatar
+    return f"https://api.dicebear.com/7.x/initials/svg?seed={user_id}&chars=2&backgroundColor=6366f1,8b5cf6,06b6d4&textColor=ffffff"
+
+def get_display_avatar(user_doc: dict) -> str:
+    """Get the appropriate avatar URL for a user"""
+    # Priority: custom avatar_url > Google picture > generated default
+    if user_doc.get("avatar_url"):
+        return user_doc["avatar_url"]
+    if user_doc.get("picture"):
+        return user_doc["picture"]
+    # Generate default based on name and user_id
+    return generate_avatar_url(user_doc.get("name", "User"), user_doc.get("user_id", "default"))
+
+def get_display_name(user_doc: dict) -> str:
+    """Get the appropriate display name for a user"""
+    # Use username if set, otherwise name
+    if user_doc.get("username"):
+        return user_doc["username"]
+    return user_doc.get("name", "User")
+
+def check_is_founder(email: str) -> bool:
+    """Check if the email belongs to the Motesart founder"""
+    return email.lower() == MOTESART_FOUNDER_EMAIL.lower()
 
 # ==================== AUTH HELPERS ====================
 
