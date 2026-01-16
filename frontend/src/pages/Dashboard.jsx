@@ -419,7 +419,7 @@ export default function Dashboard({ user }) {
                               <span className="text-xs text-slate-500 uppercase">
                                 {conv.file_type}
                               </span>
-                              {getStatusBadge(conv.status, conv.is_sheet_music)}
+                              {getStatusBadge(conv.status)}
                             </div>
                             <div className="flex items-center gap-1 mt-1 text-xs text-slate-600">
                               <Clock className="w-3 h-3" />
@@ -427,8 +427,8 @@ export default function Dashboard({ user }) {
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
-                            {conv.status === "processing" && (
-                              <Loader2 className="w-4 h-4 text-yellow-400 animate-spin" />
+                            {(conv.status === "processing" || conv.status === "converting_ocr" || conv.status === "converting_motesart") && (
+                              <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
                             )}
                             <Button
                               variant="ghost"
@@ -455,7 +455,7 @@ export default function Dashboard({ user }) {
 
         {/* Center Column - Motesart Numbers */}
         <div className="lg:col-span-6 space-y-4 overflow-hidden flex flex-col">
-          {/* Sheet Music Viewer (for uploaded PDF/images) */}
+          {/* Sheet Music Viewer (for uploaded PDF/images not yet converted) */}
           {selectedConversion?.is_sheet_music && selectedConversion?.status === "uploaded" && (
             <Card className="bg-slate-900/50 border-slate-800 border-yellow-500/30">
               <CardHeader className="pb-3">
@@ -464,9 +464,14 @@ export default function Dashboard({ user }) {
                     <FileImage className="w-4 h-4 text-neon-pink" />
                     Original Sheet Music
                   </CardTitle>
-                  <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                    Waiting for conversion (OMR Phase 2)
-                  </span>
+                  <div className="text-right">
+                    <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                      Status: Uploaded
+                    </span>
+                    <p className="text-xs text-slate-500 mt-1">
+                      OMR conversion coming in Phase 2
+                    </p>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
