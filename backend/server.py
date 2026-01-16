@@ -336,64 +336,126 @@ def detect_key_from_notes(notes: List[Dict]) -> tuple:
     return best_key, key_name
 
 def detect_chord(pitches: List[int], key_root: int) -> Dict:
-    """Detect chord type from simultaneous pitches"""
+    """
+    Detect chord type from simultaneous pitches using Motesart methodology.
+    
+    NEW METHODOLOGY (from THE MOTESART NUMBER SYSTEM 1pg Methodology.docx):
+    - Section 5: Extensions use superscripts (2⁹, 4¹¹, 6¹³)
+    - Section 7: Slash notation is BASS FIRST, CHORD SECOND (e.g., 1/3 = 1 in bass, 3-chord above)
+    
+    Symbol Legend:
+    - m → minor chord
+    - M → major chord (non-diatonic only)
+    - ⁺ → augmented chord
+    - ° → diminished chord
+    - sus² → suspended 2
+    - sus⁴ → suspended 4
+    - ⁷ → seventh chord
+    - ⁹ ¹¹ ¹³ → extensions (with base numbers 2⁹, 4¹¹, 6¹³)
+    - /X → bass note (slash notation, bass first)
+    - ½ → chromatic step up
+    """
     if len(pitches) < 2:
         return None
     
     pitches = sorted(set(pitches))
-    bass = pitches[0]
-    root = pitches[0]
+    bass = pitches[0]  # Lowest note is bass
+    
+    # Try to identify root by analyzing intervals
+    # For now, assume root is the bass note unless we detect an inversion pattern
+    root = bass
     
     intervals = [(p - root) % 12 for p in pitches]
     intervals = sorted(set(intervals))
     
-    # Chord quality detection
+    # Chord quality detection with extensions
     chord_type = "unknown"
-    if intervals == [0, 4, 7]:
+    extensions = []
+    
+    # Basic triads
+    if set([0, 4, 7]).issubset(set(intervals)):
         chord_type = "Major"
-    elif intervals == [0, 3, 7]:
+    elif set([0, 3, 7]).issubset(set(intervals)):
         chord_type = "minor"
-    elif intervals == [0, 3, 6]:
+    elif intervals == [0, 3, 6] or set([0, 3, 6]).issubset(set(intervals)):
         chord_type = "dim"
-    elif intervals == [0, 4, 8]:
+    elif intervals == [0, 4, 8] or set([0, 4, 8]).issubset(set(intervals)):
         chord_type = "aug"
-    elif intervals == [0, 2, 7]:
-        chord_type = "sus2"
-    elif intervals == [0, 5, 7]:
-        chord_type = "sus4"
-    elif intervals == [0, 4, 7, 11]:
-        chord_type = "Maj7"
-    elif intervals == [0, 3, 7, 10]:
-        chord_type = "m7"
-    elif intervals == [0, 4, 7, 10]:
-        chord_type = "7"
-    elif intervals == [0, 3, 6, 10]:
-        chord_type = "m7b5"
-    elif intervals == [0, 3, 6, 9]:
-        chord_type = "dim7"
+    elif set([0, 2, 7]).issubset(set(intervals)):
+        chord_type = "sus²"
+    elif set([0, 5, 7]).issubset(set(intervals)):
+        chord_type = "sus⁴"
+    
+    # Seventh chords
+    if 11 in intervals:  # Major 7th
+        chord_type = "M⁷" if chord_type == "Major" else chord_type + "M⁷"
+    elif 10 in intervals:  # Minor 7th (dominant or minor)
+        if chord_type == "Major":
+            chord_type = "⁷"  # Dominant 7
+        elif chord_type == "minor":
+            chord_type = "m⁷"
+        elif chord_type == "dim":
+            chord_type = "ø⁷"  # Half-diminished
+    elif 9 in intervals and chord_type == "dim":
+        chord_type = "°⁷"  # Fully diminished
+    
+    # Extensions (Section 5 methodology: 2⁹, 4¹¹, 6¹³)
+    # These show upper-structure color without introducing new numbers
+    if 2 in intervals or 14 in intervals:  # 9th (2 an octave up)
+        extensions.append("⁹")
+    if 5 in intervals and chord_type not in ["sus⁴"]:  # 11th (4 an octave up)
+        # Only mark as extension if not a sus4 chord
+        if 14 in intervals or 2 in intervals:  # Only if 9th is present
+            extensions.append("¹¹")
+    if 9 in intervals and "⁷" in chord_type:  # 13th (6 an octave up)
+        extensions.append("¹³")
     
     root_number = get_note_number(root, key_root)
-    bass_number = get_note_number(bass, key_root) if bass != root else None
+    bass_number = get_note_number(bass, key_root)
     
+    # Build symbol
     symbol = root_number
     if chord_type == "minor":
         symbol += "m"
     elif chord_type == "dim":
         symbol += "°"
     elif chord_type == "aug":
-        symbol += "+"
-    elif chord_type != "Major" and chord_type != "unknown":
+        symbol += "⁺"
+    elif chord_type not in ["Major", "unknown"]:
         symbol += chord_type
     
-    if bass_number and bass_number != root_number:
-        symbol += f"/{bass_number}"
+    # Add extensions
+    if extensions:
+        symbol += "".join(extensions)
+    
+    # Section 7: Slash notation - BASS FIRST, CHORD SECOND
+    # Format: bass/chord (e.g., 1/3 = 1 in bass, 3-chord above)
+    # This is different from traditional notation!
+    chord_above = None
+    if bass_number != root_number:
+        # The symbol represents the chord, bass_number is what's in the bass
+        # New format: bass/chord
+        chord_above = symbol
+        symbol = f"{bass_number}/{root_number}"
+        if chord_type not in ["Major", "unknown"]:
+            # Add chord quality to the chord part
+            symbol = f"{bass_number}/{root_number}"
+            if chord_type == "minor":
+                symbol += "m"
+            elif chord_type == "dim":
+                symbol += "°"
+            elif chord_type == "aug":
+                symbol += "⁺"
     
     return {
         "symbol": symbol,
         "root": root_number,
         "type": chord_type,
         "bass": bass_number,
-        "pitches": pitches
+        "chord_above": chord_above,
+        "extensions": extensions,
+        "pitches": pitches,
+        "methodology_note": "Bass-first slash notation (Section 7): X/Y = X in bass, Y-chord above"
     }
 
 def detect_progressions(chords: List[Dict]) -> List[Dict]:
