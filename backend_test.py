@@ -300,10 +300,6 @@ class MotesartAPITester:
         """Test conversion-related endpoints"""
         print("\n🔍 Testing Conversions Endpoints...")
         
-        if not self.session_token:
-            print("   Skipping conversions test - no valid session")
-            return False
-        
         # Test get conversions
         success, data = self.run_api_test(
             "Get Conversions",
