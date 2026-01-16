@@ -21,7 +21,7 @@ class MotesartAPITester:
         self.tests_passed = 0
         self.test_results = []
         # Use provided test credentials
-        self.test_user_email = "test2@motesart.com"
+        self.test_user_email = "test3@motesart.com"
         self.test_user_password = "testpassword123"
         self.pdf_conversion_id = None
         self.image_conversion_id = None
