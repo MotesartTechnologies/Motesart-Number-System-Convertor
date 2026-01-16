@@ -103,9 +103,11 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
             <Link to="/" className="inline-flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-xl bg-neon-indigo/20 border border-neon-indigo/50 flex items-center justify-center">
-                <Music className="w-5 h-5 text-neon-indigo" />
-              </div>
+              <img 
+                src={MOTESART_LOGO} 
+                alt="Motesart" 
+                className="w-10 h-10 rounded-xl object-cover"
+              />
               <span className="font-heading font-semibold text-xl">Motesart Converter</span>
             </Link>
             <h1 className="font-heading text-3xl font-bold mb-2">Welcome</h1>
