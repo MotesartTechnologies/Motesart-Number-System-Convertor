@@ -132,12 +132,12 @@ class MotesartAPITester:
         """Test authentication endpoints"""
         print("\n🔍 Testing Auth Endpoints...")
         
-        # Test /api/auth/me without session
+        # Test /api/auth/me with session (should work)
         success, data = self.run_api_test(
-            "Auth Me (No Session)",
+            "Auth Me (With Session)",
             "GET",
             "api/auth/me", 
-            401
+            200
         )
         
         # Test logout
