@@ -664,18 +664,40 @@ def convert_to_motesart(parsed_data: Dict) -> Dict:
 
 # ==================== FILE UPLOAD & CONVERSION ====================
 
+# Supported file types
+SUPPORTED_MUSIC_FILES = ["mid", "midi", "xml", "musicxml", "mxl"]
+SUPPORTED_SHEET_MUSIC = ["pdf", "png", "jpg", "jpeg"]
+ALL_SUPPORTED = SUPPORTED_MUSIC_FILES + SUPPORTED_SHEET_MUSIC
+
 @api_router.post("/upload")
 async def upload_file(file: UploadFile = File(...), user: User = Depends(get_current_user)):
-    """Upload and convert a music file"""
+    """
+    Upload and convert a music file.
+    
+    Sheet-music first approach:
+    - Primary: PDF, PNG, JPG (sheet music images)
+    - Secondary: MusicXML, MIDI (digital music files)
+    
+    For PDF/images: stores file and marks as "uploaded" (OMR processing in Phase 2)
+    For MIDI/MusicXML: immediate conversion to Motesart numbers
+    """
     filename = file.filename or "unknown"
     extension = filename.split(".")[-1].lower()
     
-    if extension not in ["mid", "midi", "xml", "musicxml", "mxl"]:
-        raise HTTPException(status_code=400, detail="Unsupported file type. Please upload MIDI or MusicXML files.")
+    if extension not in ALL_SUPPORTED:
+        raise HTTPException(
+            status_code=400, 
+            detail="Unsupported file type. Please upload sheet music (PDF, PNG, JPG) or music files (MusicXML, MIDI)."
+        )
     
     content = await file.read()
+    file_size = len(content)
     
     conversion_id = f"conv_{uuid.uuid4().hex[:12]}"
+    
+    # Determine file category
+    is_sheet_music = extension in SUPPORTED_SHEET_MUSIC
+    initial_status = "uploaded" if is_sheet_music else "processing"
     
     # Save initial conversion record
     conversion_doc = {
@@ -683,49 +705,98 @@ async def upload_file(file: UploadFile = File(...), user: User = Depends(get_cur
         "user_id": user.user_id,
         "filename": filename,
         "file_type": extension,
-        "status": "processing",
+        "file_size": file_size,
+        "is_sheet_music": is_sheet_music,
+        "status": initial_status,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
+    
+    # For sheet music (PDF/images), store the file content for later OMR processing
+    if is_sheet_music:
+        import base64
+        conversion_doc["file_data"] = base64.b64encode(content).decode('utf-8')
+        conversion_doc["status_message"] = "Uploaded – waiting for conversion (OMR coming in Phase 2)"
+    
     await db.conversions.insert_one(conversion_doc)
     
-    try:
-        # Parse file based on type
-        if extension in ["mid", "midi"]:
-            parsed_data = parse_midi_file(content)
-        else:
-            parsed_data = parse_musicxml_file(content)
-        
-        # Convert to Motesart
-        motesart_data = convert_to_motesart(parsed_data)
-        
-        # Update conversion record
-        await db.conversions.update_one(
-            {"conversion_id": conversion_id},
-            {"$set": {
-                "status": "completed",
-                "key_signature": motesart_data["key_signature"],
-                "time_signature": motesart_data["time_signature"],
-                "tempo": motesart_data["tempo"],
-                "notes": motesart_data["notes"],
-                "chords": motesart_data["chords"],
-                "progressions": motesart_data["progressions"],
-                "sections": motesart_data["sections"],
-                "raw_data": {"key_root": motesart_data["key_root"], "key_name": motesart_data["key_name"]},
-                "updated_at": datetime.now(timezone.utc).isoformat()
-            }}
-        )
-        
-        conversion_doc = await db.conversions.find_one({"conversion_id": conversion_id}, {"_id": 0})
-        return conversion_doc
-        
-    except Exception as e:
-        logger.error(f"Conversion error: {str(e)}")
-        await db.conversions.update_one(
-            {"conversion_id": conversion_id},
-            {"$set": {"status": "error", "error_message": str(e)}}
-        )
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+    # For MIDI/MusicXML, process immediately
+    if not is_sheet_music:
+        try:
+            # Parse file based on type
+            if extension in ["mid", "midi"]:
+                parsed_data = parse_midi_file(content)
+            else:
+                parsed_data = parse_musicxml_file(content)
+            
+            # Convert to Motesart
+            motesart_data = convert_to_motesart(parsed_data)
+            
+            # Update conversion record with results
+            await db.conversions.update_one(
+                {"conversion_id": conversion_id},
+                {"$set": {
+                    "status": "completed",
+                    "key_signature": motesart_data["key_signature"],
+                    "time_signature": motesart_data["time_signature"],
+                    "tempo": motesart_data["tempo"],
+                    "notes": motesart_data["notes"],
+                    "chords": motesart_data["chords"],
+                    "progressions": motesart_data["progressions"],
+                    "sections": motesart_data["sections"],
+                    "raw_data": {"key_root": motesart_data["key_root"], "key_name": motesart_data["key_name"]},
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            
+        except Exception as e:
+            logger.error(f"Conversion error: {str(e)}")
+            await db.conversions.update_one(
+                {"conversion_id": conversion_id},
+                {"$set": {
+                    "status": "error", 
+                    "error_message": str(e),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+    
+    # Return the conversion record (without file_data for response size)
+    conversion_doc = await db.conversions.find_one(
+        {"conversion_id": conversion_id}, 
+        {"_id": 0, "file_data": 0}
+    )
+    return conversion_doc
+
+@api_router.get("/conversions/{conversion_id}/file")
+async def get_conversion_file(conversion_id: str, user: User = Depends(get_current_user)):
+    """Get the original uploaded file for a conversion (for sheet music display)"""
+    conversion = await db.conversions.find_one(
+        {"conversion_id": conversion_id, "user_id": user.user_id},
+        {"_id": 0}
+    )
+    if not conversion:
+        raise HTTPException(status_code=404, detail="Conversion not found")
+    
+    if not conversion.get("file_data"):
+        raise HTTPException(status_code=404, detail="No file data available")
+    
+    import base64
+    file_data = base64.b64decode(conversion["file_data"])
+    file_type = conversion.get("file_type", "pdf")
+    
+    media_types = {
+        "pdf": "application/pdf",
+        "png": "image/png",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg"
+    }
+    
+    return StreamingResponse(
+        io.BytesIO(file_data),
+        media_type=media_types.get(file_type, "application/octet-stream"),
+        headers={"Content-Disposition": f"inline; filename={conversion.get('filename', 'file')}"}
+    )
 
 @api_router.get("/conversions")
 async def get_conversions(user: User = Depends(get_current_user)):
