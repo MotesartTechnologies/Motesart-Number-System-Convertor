@@ -501,25 +501,54 @@ startxref
         return success
 
     def test_export_endpoints(self):
-        """Test export endpoints"""
+        """Test export endpoints with branded Motesart templates"""
         print("\n🔍 Testing Export Endpoints...")
         
-        if not hasattr(self, 'test_conversion_id'):
-            print("   Skipping export test - no conversion available")
+        # Use MIDI conversion for export testing (it has completed status)
+        if not self.midi_conversion_id:
+            print("   Skipping export test - no completed conversion available")
             return False
         
-        # Test different export formats
-        formats = ['text', 'csv', 'pdf']
+        success_count = 0
+        total_tests = 0
         
-        for format_type in formats:
-            success, data = self.run_api_test(
-                f"Export {format_type.upper()}",
-                "GET",
-                f"api/export/{self.test_conversion_id}?format={format_type}",
-                200
-            )
+        # Test PDF export with branded template
+        total_tests += 1
+        success, response = self.run_api_test(
+            "Export PDF with Branded Template",
+            "GET",
+            f"api/export/{self.midi_conversion_id}?format=pdf",
+            200
+        )
+        if success:
+            success_count += 1
+            print("   ✅ PDF export with Motesart branding successful")
         
-        return True
+        # Test CSV export with branded header
+        total_tests += 1
+        success, response = self.run_api_test(
+            "Export CSV with Branded Header",
+            "GET",
+            f"api/export/{self.midi_conversion_id}?format=csv",
+            200
+        )
+        if success:
+            success_count += 1
+            print("   ✅ CSV export with branded header successful")
+        
+        # Test Text export with branded header and legend
+        total_tests += 1
+        success, response = self.run_api_test(
+            "Export Text with Branded Header and Legend",
+            "GET",
+            f"api/export/{self.midi_conversion_id}?format=text",
+            200
+        )
+        if success:
+            success_count += 1
+            print("   ✅ Text export with branded header and legend successful")
+        
+        return success_count == total_tests
 
     def test_invalid_endpoints(self):
         """Test invalid/edge case endpoints"""
