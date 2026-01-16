@@ -1381,13 +1381,13 @@ async def export_conversion(
             for prog in progressions:
                 lines.append(f"- {prog.get('name')}: {prog.get('description', '')}")
         
-        # Footer legend
-        lines.extend(["", "---", MOTESART_LEGEND])
+        # Footer legend (rich version for text)
+        lines.extend(["", "---", MOTESART_LEGEND_RICH])
         
         content = "\n".join(lines)
         return StreamingResponse(
-            io.BytesIO(content.encode()),
-            media_type="text/plain",
+            io.BytesIO(content.encode('utf-8')),
+            media_type="text/plain; charset=utf-8",
             headers={"Content-Disposition": f"attachment; filename={filename_base}_motesart.txt"}
         )
 
