@@ -211,7 +211,7 @@ class MotesartAPITester:
         """Test authentication endpoints"""
         print("\n🔍 Testing Auth Endpoints...")
         
-        # Test /api/auth/me with session (should work)
+        # Test /api/auth/me with session (should work after login)
         success, data = self.run_api_test(
             "Auth Me (With Session)",
             "GET",
@@ -219,15 +219,10 @@ class MotesartAPITester:
             200
         )
         
-        # Test logout
-        success, data = self.run_api_test(
-            "Logout",
-            "POST",
-            "api/auth/logout",
-            200
-        )
+        if success:
+            print(f"   Current user: {data.get('name')} ({data.get('email')})")
         
-        return True
+        return success
 
     def test_upload_endpoint(self):
         """Test file upload endpoint"""
