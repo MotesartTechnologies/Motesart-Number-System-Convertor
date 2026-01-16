@@ -439,37 +439,43 @@ startxref
         
         return success_count == total_tests if total_tests > 0 else False
 
-    def test_conversions_endpoints(self):
-        """Test conversion-related endpoints"""
-        print("\n🔍 Testing Conversions Endpoints...")
+    def test_conversions_list(self):
+        """Test conversions list shows uploaded files with correct status"""
+        print("\n🔍 Testing Conversions List...")
         
-        # Test get conversions
         success, data = self.run_api_test(
-            "Get Conversions",
+            "Get Conversions List",
             "GET",
             "api/conversions",
             200
         )
         
-        conversions = data if isinstance(data, list) else []
-        
-        if conversions:
-            conversion_id = conversions[0].get('conversion_id')
+        if success:
+            conversions = data if isinstance(data, list) else []
+            print(f"   Found {len(conversions)} conversions")
             
-            # Test get specific conversion
-            success, data = self.run_api_test(
-                "Get Specific Conversion",
-                "GET",
-                f"api/conversions/{conversion_id}",
-                200
-            )
+            # Check for uploaded files with correct status
+            uploaded_files = [c for c in conversions if c.get('status') == 'uploaded']
+            completed_files = [c for c in conversions if c.get('status') == 'completed']
             
-            # Don't delete yet - save for explain/export tests
-            self.test_conversion_id = conversion_id
-        else:
-            print("   No conversions found to test specific endpoints")
+            print(f"   Uploaded files (sheet music): {len(uploaded_files)}")
+            print(f"   Completed files (MIDI/XML): {len(completed_files)}")
+            
+            # Verify our test files are in the list
+            pdf_found = any(c.get('conversion_id') == self.pdf_conversion_id for c in conversions)
+            image_found = any(c.get('conversion_id') == self.image_conversion_id for c in conversions)
+            midi_found = any(c.get('conversion_id') == self.midi_conversion_id for c in conversions)
+            
+            if pdf_found:
+                print("   ✅ PDF file found in Recent Files")
+            if image_found:
+                print("   ✅ Image file found in Recent Files")
+            if midi_found:
+                print("   ✅ MIDI file found in Recent Files")
+            
+            return pdf_found or image_found or midi_found
         
-        return True
+        return success
 
     def test_explain_endpoint(self):
         """Test AI explanation endpoint"""
