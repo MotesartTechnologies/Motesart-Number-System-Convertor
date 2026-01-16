@@ -1165,8 +1165,9 @@ Keep the explanation concise (2-3 paragraphs) and educational."""
 
 # ==================== EXPORT (BRANDED MOTESART TEMPLATE) ====================
 
-# Motesart Legend for exports
-MOTESART_LEGEND = """Symbol Legend: ½ = chromatic step up | /X = bass first (slash) | m = minor | M = non-diatonic major | ⁺ = augmented | ° = diminished | sus²/sus⁴ = suspensions | 2⁹ / 4¹¹ / 6¹³ = extensions"""
+# Motesart Legend for exports (ASCII-safe version for PDF)
+MOTESART_LEGEND = "Symbol Legend: 1/2 = chromatic step up | /X = bass first (slash) | m = minor | M = non-diatonic major | + = augmented | o = diminished | sus2/sus4 = suspensions | 9 11 13 = extensions"
+MOTESART_LEGEND_RICH = "½ = chromatic step up | /X = bass first (slash) | m = minor | M = non-diatonic major | ⁺ = augmented | ° = diminished | sus²/sus⁴ = suspensions | 2⁹ / 4¹¹ / 6¹³ = extensions"
 
 @api_router.get("/export/{conversion_id}")
 async def export_conversion(
@@ -1197,8 +1198,9 @@ async def export_conversion(
     tempo = conversion.get("tempo", 120)
     content_type = conversion.get("content_type", "traditional")
     
-    # Branded header
-    branded_header = "Converted by Motesart Technologies — Motesart Number System v1.0"
+    # Branded header (ASCII-safe for PDF)
+    branded_header = "Converted by Motesart Technologies - Motesart Number System v1.0"
+    branded_header_rich = "Converted by Motesart Technologies — Motesart Number System v1.0"
     
     if format == "csv":
         # Generate CSV with branded header
