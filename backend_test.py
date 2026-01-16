@@ -251,30 +251,123 @@ class MotesartAPITester:
         
         return success and success2
 
-    def test_upload_endpoint(self):
-        """Test file upload endpoint"""
-        print("\n🔍 Testing Upload Endpoint...")
+    def test_pdf_upload(self):
+        """Test PDF file upload"""
+        print("\n🔍 Testing PDF Upload...")
         
-        # Need to login again after logout test
-        login_data = {
-            "email": self.test_user_email,
-            "password": self.test_user_password
-        }
+        # Create a minimal PDF file
+        pdf_content = b"""%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 44
+>>
+stream
+BT
+/F1 12 Tf
+72 720 Td
+(Test Sheet Music) Tj
+ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000206 00000 n 
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+299
+%%EOF"""
         
-        login_success, data = self.run_api_test(
-            "Re-login for Upload Test",
+        files = {'file': ('test_sheet_music.pdf', pdf_content, 'application/pdf')}
+        
+        success, data = self.run_api_test(
+            "Upload PDF File",
             "POST",
-            "api/auth/login",
+            "api/upload",
             200,
-            data=login_data
+            files=files
         )
         
-        if not login_success:
-            print("   Skipping upload test - login failed")
-            return False
+        if success:
+            self.pdf_conversion_id = data.get('conversion_id')
+            print(f"   Created PDF conversion: {self.pdf_conversion_id}")
+            print(f"   Status: {data.get('status')}")
+            print(f"   Is sheet music: {data.get('is_sheet_music')}")
+            
+            # Verify it's marked as uploaded status for sheet music
+            if data.get('status') == 'uploaded' and data.get('is_sheet_music'):
+                print("   ✅ PDF correctly marked as uploaded sheet music")
+            else:
+                print("   ❌ PDF not properly categorized as uploaded sheet music")
+                success = False
+        
+        return success
+
+    def test_image_upload(self):
+        """Test PNG/JPG image upload"""
+        print("\n🔍 Testing Image Upload...")
+        
+        # Create a minimal PNG file (1x1 pixel)
+        png_content = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\tpHYs\x00\x00\x0b\x13\x00\x00\x0b\x13\x01\x00\x9a\x9c\x18\x00\x00\x00\nIDAT\x08\x1dc\xf8\x00\x00\x00\x01\x00\x01\x02\x1a\x05\x1c\x00\x00\x00\x00IEND\xaeB`\x82'
+        
+        files = {'file': ('test_sheet_music.png', png_content, 'image/png')}
+        
+        success, data = self.run_api_test(
+            "Upload PNG Image",
+            "POST",
+            "api/upload",
+            200,
+            files=files
+        )
+        
+        if success:
+            self.image_conversion_id = data.get('conversion_id')
+            print(f"   Created image conversion: {self.image_conversion_id}")
+            print(f"   Status: {data.get('status')}")
+            print(f"   Is sheet music: {data.get('is_sheet_music')}")
+            
+            # Verify it's marked as uploaded status for sheet music
+            if data.get('status') == 'uploaded' and data.get('is_sheet_music'):
+                print("   ✅ Image correctly marked as uploaded sheet music")
+            else:
+                print("   ❌ Image not properly categorized as uploaded sheet music")
+                success = False
+        
+        return success
+
+    def test_midi_upload(self):
+        """Test MIDI file upload (should still convert properly)"""
+        print("\n🔍 Testing MIDI Upload...")
         
         # Create a simple test MIDI file (minimal valid MIDI)
-        # This is a very basic MIDI file with just header
         midi_content = bytes([
             0x4D, 0x54, 0x68, 0x64,  # "MThd"
             0x00, 0x00, 0x00, 0x06,  # Header length
@@ -292,15 +385,59 @@ class MotesartAPITester:
             "Upload MIDI File",
             "POST",
             "api/upload",
-            200,  # Changed from 201 to 200 based on actual response
+            200,
             files=files
         )
         
         if success:
-            self.test_conversion_id = data.get('conversion_id')
-            print(f"   Created conversion: {self.test_conversion_id}")
+            self.midi_conversion_id = data.get('conversion_id')
+            print(f"   Created MIDI conversion: {self.midi_conversion_id}")
+            print(f"   Status: {data.get('status')}")
+            print(f"   Is sheet music: {data.get('is_sheet_music')}")
+            
+            # MIDI should be processed and marked as completed
+            if data.get('status') == 'completed' and not data.get('is_sheet_music'):
+                print("   ✅ MIDI correctly processed and completed")
+            else:
+                print("   ❌ MIDI not properly processed")
+                success = False
         
         return success
+
+    def test_file_retrieval(self):
+        """Test file retrieval endpoint for uploaded files"""
+        print("\n🔍 Testing File Retrieval...")
+        
+        success_count = 0
+        total_tests = 0
+        
+        # Test PDF file retrieval
+        if self.pdf_conversion_id:
+            total_tests += 1
+            success, data = self.run_api_test(
+                "Retrieve PDF File",
+                "GET",
+                f"api/conversions/{self.pdf_conversion_id}/file",
+                200
+            )
+            if success:
+                success_count += 1
+                print("   ✅ PDF file retrieved successfully")
+        
+        # Test image file retrieval
+        if self.image_conversion_id:
+            total_tests += 1
+            success, data = self.run_api_test(
+                "Retrieve Image File",
+                "GET",
+                f"api/conversions/{self.image_conversion_id}/file",
+                200
+            )
+            if success:
+                success_count += 1
+                print("   ✅ Image file retrieved successfully")
+        
+        return success_count == total_tests if total_tests > 0 else False
 
     def test_conversions_endpoints(self):
         """Test conversion-related endpoints"""
