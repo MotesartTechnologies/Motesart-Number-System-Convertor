@@ -47,8 +47,6 @@ class MotesartAPITester:
         
         # Default headers
         default_headers = {'Content-Type': 'application/json'}
-        if self.session_token:
-            default_headers['Authorization'] = f'Bearer {self.session_token}'
         
         # Merge with provided headers
         if headers:
@@ -60,14 +58,14 @@ class MotesartAPITester:
 
         try:
             if method == 'GET':
-                response = requests.get(url, headers=default_headers, timeout=30)
+                response = self.session.get(url, headers=default_headers, timeout=30)
             elif method == 'POST':
                 if files:
-                    response = requests.post(url, files=files, headers=default_headers, timeout=30)
+                    response = self.session.post(url, files=files, headers=default_headers, timeout=30)
                 else:
-                    response = requests.post(url, json=data, headers=default_headers, timeout=30)
+                    response = self.session.post(url, json=data, headers=default_headers, timeout=30)
             elif method == 'DELETE':
-                response = requests.delete(url, headers=default_headers, timeout=30)
+                response = self.session.delete(url, headers=default_headers, timeout=30)
 
             success = response.status_code == expected_status
             
