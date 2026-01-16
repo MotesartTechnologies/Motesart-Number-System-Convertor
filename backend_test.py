@@ -355,8 +355,8 @@ class MotesartAPITester:
         """Test export endpoints"""
         print("\n🔍 Testing Export Endpoints...")
         
-        if not self.session_token or not hasattr(self, 'test_conversion_id'):
-            print("   Skipping export test - no valid session or conversion")
+        if not hasattr(self, 'test_conversion_id'):
+            print("   Skipping export test - no conversion available")
             return False
         
         # Test different export formats
