@@ -411,31 +411,36 @@ class MotesartAPITester:
 
     def run_all_tests(self):
         """Run comprehensive test suite"""
-        print("🚀 Starting Motesart API Test Suite")
+        print("🚀 Starting Motesart API Test Suite (Iteration 2)")
         print(f"Backend URL: {self.base_url}")
         print("=" * 60)
         
         # Test basic connectivity
         health_ok = self.test_health_check()
         
-        # Test auth endpoints
-        auth_ok = self.test_auth_endpoints()
+        # Test new email authentication features
+        register_ok = self.test_email_registration()
+        duplicate_ok = self.test_duplicate_registration()
+        login_ok = self.test_email_login()
+        invalid_login_ok = self.test_invalid_login()
         
-        # Try to create/find test session
-        session_ok = self.create_test_user_session()
+        # Test authenticated endpoints
+        auth_me_ok = self.test_auth_endpoints()
         
-        # If we have a session, test protected endpoints
-        if session_ok:
-            self.test_upload_endpoint()
-            self.test_conversions_endpoints()
-            self.test_explain_endpoint()
-            self.test_export_endpoints()
+        # Test protected endpoints with authenticated session
+        upload_ok = self.test_upload_endpoint()
+        conversions_ok = self.test_conversions_endpoints()
+        explain_ok = self.test_explain_endpoint()
+        export_ok = self.test_export_endpoints()
+        
+        # Test logout (this will invalidate session)
+        logout_ok = self.test_logout()
         
         # Test invalid cases
-        self.test_invalid_endpoints()
+        invalid_ok = self.test_invalid_endpoints()
         
-        # Clean up test data
-        self.test_cleanup()
+        # Clean up test data (need to login again)
+        cleanup_ok = self.test_cleanup()
         
         # Print summary
         print("\n" + "=" * 60)
