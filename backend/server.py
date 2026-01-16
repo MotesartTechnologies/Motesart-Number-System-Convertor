@@ -308,10 +308,19 @@ async def register_email(req: EmailRegisterRequest, response: Response):
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     hashed_pw = hash_password(req.password)
     
+    # Check if this is the founder
+    is_founder = check_is_founder(req.email)
+    
+    # Generate unique avatar for new user
+    default_avatar = generate_avatar_url(req.name, user_id)
+    
     await db.users.insert_one({
         "user_id": user_id,
         "email": req.email,
         "name": req.name,
+        "username": "Motesart" if is_founder else None,
+        "avatar_url": MOTESART_FOUNDER_AVATAR if is_founder else default_avatar,
+        "is_founder": is_founder,
         "password_hash": hashed_pw,
         "auth_type": "email",
         "created_at": datetime.now(timezone.utc).isoformat()
@@ -339,6 +348,9 @@ async def register_email(req: EmailRegisterRequest, response: Response):
     )
     
     user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    # Add computed fields
+    user_doc["computed_avatar"] = get_display_avatar(user_doc)
+    user_doc["display_name"] = get_display_name(user_doc)
     return user_doc
 
 @api_router.post("/auth/login")
