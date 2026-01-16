@@ -555,10 +555,17 @@ export default function Dashboard({ user }) {
               <ScrollArea className="h-full px-4 pb-4">
                 {!selectedConversion ? (
                   <div className="flex flex-col items-center justify-center h-64 text-center">
-                    <FileMusic className="w-12 h-12 text-slate-700 mb-4" />
-                    <p className="text-slate-400">Upload sheet music to see the Motesart numbers</p>
-                    <p className="text-sm text-slate-600 mt-2">
+                    <img 
+                      src={MOTESART_LOGO} 
+                      alt="Motesart" 
+                      className="w-16 h-16 rounded-xl mb-4 opacity-60"
+                    />
+                    <p className="text-slate-300 font-medium">Upload Sheet Music to Get Started</p>
+                    <p className="text-sm text-slate-500 mt-2">
                       Supports: Traditional scores, Chord charts, Hymnals, Lead sheets
+                    </p>
+                    <p className="text-xs text-neon-indigo mt-3">
+                      MusicXML & MIDI → Instant conversion | PDF/Image → Phase 2
                     </p>
                   </div>
                 ) : selectedConversion.status === "uploaded" ? (
