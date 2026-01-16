@@ -213,20 +213,41 @@ async def create_session(request: Request, response: Response):
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     existing_user = await db.users.find_one({"email": data["email"]}, {"_id": 0})
     
+    # Check if this is the founder
+    is_founder = check_is_founder(data["email"])
+    
     if existing_user:
         user_id = existing_user["user_id"]
+        # Update user info but preserve custom avatar and username
+        update_data = {
+            "name": data["name"],
+            "picture": data.get("picture"),
+            "is_founder": is_founder
+        }
+        # Set founder-specific fields if this is the founder
+        if is_founder and not existing_user.get("username"):
+            update_data["username"] = "Motesart"
+            update_data["avatar_url"] = MOTESART_FOUNDER_AVATAR
+        
         await db.users.update_one(
             {"user_id": user_id},
-            {"$set": {"name": data["name"], "picture": data.get("picture")}}
+            {"$set": update_data}
         )
     else:
-        await db.users.insert_one({
+        # Generate unique avatar for new user
+        default_avatar = generate_avatar_url(data["name"], user_id)
+        
+        new_user_data = {
             "user_id": user_id,
             "email": data["email"],
             "name": data["name"],
             "picture": data.get("picture"),
+            "avatar_url": MOTESART_FOUNDER_AVATAR if is_founder else default_avatar,
+            "username": "Motesart" if is_founder else None,
+            "is_founder": is_founder,
             "created_at": datetime.now(timezone.utc).isoformat()
-        })
+        }
+        await db.users.insert_one(new_user_data)
     
     session_token = data.get("session_token") or f"st_{uuid.uuid4().hex}"
     expires_at = datetime.now(timezone.utc) + timedelta(days=7)
@@ -250,12 +271,20 @@ async def create_session(request: Request, response: Response):
     )
     
     user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    # Add computed fields
+    user_doc["computed_avatar"] = get_display_avatar(user_doc)
+    user_doc["display_name"] = get_display_name(user_doc)
     return user_doc
 
 @api_router.get("/auth/me")
 async def get_me(user: User = Depends(get_current_user)):
-    """Get current authenticated user"""
-    return user.model_dump()
+    """Get current authenticated user with avatar info"""
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0, "password_hash": 0})
+    if user_doc:
+        # Add computed avatar and display name
+        user_doc["computed_avatar"] = get_display_avatar(user_doc)
+        user_doc["display_name"] = get_display_name(user_doc)
+    return user_doc
 
 @api_router.post("/auth/logout")
 async def logout(request: Request, response: Response):
