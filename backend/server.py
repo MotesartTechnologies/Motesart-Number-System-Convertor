@@ -1163,7 +1163,10 @@ Keep the explanation concise (2-3 paragraphs) and educational."""
         logger.error(f"Explain error: {str(e)}")
         return {"explanation": f"Key: {conversion.get('key_signature', 'Unknown')}. Unable to generate detailed explanation at this time."}
 
-# ==================== EXPORT ====================
+# ==================== EXPORT (BRANDED MOTESART TEMPLATE) ====================
+
+# Motesart Legend for exports
+MOTESART_LEGEND = """Symbol Legend: ½ = chromatic step up | /X = bass first (slash) | m = minor | M = non-diatonic major | ⁺ = augmented | ° = diminished | sus²/sus⁴ = suspensions | 2⁹ / 4¹¹ / 6¹³ = extensions"""
 
 @api_router.get("/export/{conversion_id}")
 async def export_conversion(
@@ -1171,7 +1174,15 @@ async def export_conversion(
     format: str = "text",
     user: User = Depends(get_current_user)
 ):
-    """Export conversion to PDF, CSV, or Text"""
+    """
+    Export conversion to PDF, CSV, or Text with branded Motesart template.
+    
+    Template includes:
+    - Header with Motesart branding
+    - Song title and key
+    - Sections with progressions
+    - Symbol legend footer
+    """
     conversion = await db.conversions.find_one(
         {"conversion_id": conversion_id, "user_id": user.user_id},
         {"_id": 0}
@@ -1180,40 +1191,57 @@ async def export_conversion(
         raise HTTPException(status_code=404, detail="Conversion not found")
     
     filename_base = conversion.get("filename", "export").rsplit(".", 1)[0]
+    title = conversion.get("title") or filename_base
+    key_sig = conversion.get("key_signature", "1 = C")
+    time_sig = conversion.get("time_signature", "4/4")
+    tempo = conversion.get("tempo", 120)
+    content_type = conversion.get("content_type", "traditional")
+    
+    # Branded header
+    branded_header = "Converted by Motesart Technologies — Motesart Number System v1.0"
     
     if format == "csv":
-        # Generate CSV
+        # Generate CSV with branded header
         import csv
         output = io.StringIO()
         writer = csv.writer(output)
         
-        # Header
-        writer.writerow(["Filename", conversion.get("filename")])
-        writer.writerow(["Key", conversion.get("key_signature")])
-        writer.writerow(["Time Signature", conversion.get("time_signature")])
-        writer.writerow(["Tempo", conversion.get("tempo")])
+        # Branded header
+        writer.writerow([branded_header])
+        writer.writerow([])
+        writer.writerow(["Title", title])
+        writer.writerow(["Key", key_sig])
+        writer.writerow(["Time Signature", time_sig])
+        writer.writerow(["Tempo", f"{tempo} BPM"])
+        writer.writerow(["Content Type", CONTENT_TYPES.get(content_type, content_type)])
         writer.writerow([])
         
-        # Notes
-        writer.writerow(["Beat", "Pitch", "Motesart Number", "Duration"])
-        for note in conversion.get("notes", []):
+        # Sections & Progressions
+        writer.writerow(["Section", "Progression", "Chords"])
+        for section in conversion.get("sections", []):
+            chords_str = " | ".join([c.get("symbol", "") for c in section.get("chords", [])])
             writer.writerow([
-                note.get("beat", 0),
-                note.get("pitch", 0),
-                note.get("motesart_number", ""),
-                note.get("duration", 0)
+                section.get("name", ""),
+                section.get("progression", ""),
+                chords_str
             ])
         
         writer.writerow([])
-        writer.writerow(["Chords"])
-        writer.writerow(["Beat", "Symbol", "Type", "Root"])
-        for chord in conversion.get("chords", []):
-            writer.writerow([
-                chord.get("beat", 0),
-                chord.get("symbol", ""),
-                chord.get("type", ""),
-                chord.get("root", "")
-            ])
+        
+        # Notes (if available)
+        notes = conversion.get("notes", [])
+        if notes:
+            writer.writerow(["Beat", "Pitch", "Motesart Number", "Duration"])
+            for note in notes:
+                writer.writerow([
+                    note.get("beat", 0),
+                    note.get("pitch", 0),
+                    note.get("motesart_number", ""),
+                    note.get("duration", 0)
+                ])
+        
+        writer.writerow([])
+        writer.writerow([MOTESART_LEGEND])
         
         content = output.getvalue()
         return StreamingResponse(
@@ -1223,37 +1251,75 @@ async def export_conversion(
         )
     
     elif format == "pdf":
-        # Generate PDF
+        # Generate branded PDF
         from fpdf import FPDF
         
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font("Helvetica", "B", 16)
-        pdf.cell(0, 10, "Motesart Number Conversion", ln=True, align="C")
         
-        pdf.set_font("Helvetica", "", 12)
-        pdf.cell(0, 8, f"File: {conversion.get('filename')}", ln=True)
-        pdf.cell(0, 8, f"Key: {conversion.get('key_signature')}", ln=True)
-        pdf.cell(0, 8, f"Time: {conversion.get('time_signature')} | Tempo: {conversion.get('tempo')} BPM", ln=True)
+        # Header with branding
+        pdf.set_font("Helvetica", "B", 18)
+        pdf.cell(0, 12, "Motesart Number Conversion", ln=True, align="C")
+        pdf.set_font("Helvetica", "I", 10)
+        pdf.set_text_color(100, 100, 100)
+        pdf.cell(0, 6, branded_header, ln=True, align="C")
+        pdf.set_text_color(0, 0, 0)
         pdf.ln(5)
         
-        # Sections
+        # Title and Key
         pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 10, "Sections & Progressions", ln=True)
+        pdf.cell(0, 10, f"{title} — {key_sig}", ln=True, align="C")
+        
         pdf.set_font("Helvetica", "", 11)
+        pdf.cell(0, 8, f"Time: {time_sig} | Tempo: {tempo} BPM | Type: {CONTENT_TYPES.get(content_type, content_type)}", ln=True, align="C")
+        pdf.ln(8)
+        
+        # Sections & Progressions
+        pdf.set_font("Helvetica", "B", 13)
+        pdf.cell(0, 10, "Sections & Progressions", ln=True)
+        pdf.set_font("Courier", "", 11)
+        
         for section in conversion.get("sections", []):
-            pdf.cell(0, 7, f"{section.get('name')}: {section.get('progression')}", ln=True)
+            section_name = section.get("name", "Section")
+            progression = section.get("progression", "")
+            chords = section.get("chords", [])
+            
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.cell(0, 8, f"{section_name}:", ln=True)
+            
+            pdf.set_font("Courier", "", 11)
+            if chords:
+                chord_symbols = " | ".join([c.get("symbol", "") for c in chords[:12]])
+                pdf.multi_cell(0, 6, chord_symbols)
+            elif progression:
+                pdf.cell(0, 6, progression, ln=True)
+            pdf.ln(3)
         
-        pdf.ln(5)
+        # All Chords summary
+        all_chords = conversion.get("chords", [])
+        if all_chords:
+            pdf.ln(5)
+            pdf.set_font("Helvetica", "B", 13)
+            pdf.cell(0, 10, "All Chords", ln=True)
+            pdf.set_font("Courier", "", 10)
+            chord_line = " | ".join([c.get("symbol", "") for c in all_chords[:30]])
+            pdf.multi_cell(0, 6, chord_line)
         
-        # Chords
-        pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 10, "Chords", ln=True)
-        pdf.set_font("Courier", "", 10)
+        # Progressions Detected
+        progressions = conversion.get("progressions", [])
+        if progressions:
+            pdf.ln(5)
+            pdf.set_font("Helvetica", "B", 13)
+            pdf.cell(0, 10, "Progressions Detected", ln=True)
+            pdf.set_font("Helvetica", "", 11)
+            for prog in progressions:
+                pdf.cell(0, 7, f"• {prog.get('name')}: {prog.get('description', '')}", ln=True)
         
-        chords = conversion.get("chords", [])
-        chord_line = " | ".join([c.get("symbol", "") for c in chords[:20]])
-        pdf.multi_cell(0, 6, chord_line)
+        # Footer Legend
+        pdf.ln(10)
+        pdf.set_font("Helvetica", "I", 8)
+        pdf.set_text_color(80, 80, 80)
+        pdf.multi_cell(0, 5, MOTESART_LEGEND)
         
         pdf_output = io.BytesIO()
         pdf.output(pdf_output)
@@ -1266,27 +1332,47 @@ async def export_conversion(
         )
     
     else:
-        # Generate Text/Markdown
+        # Generate Text/Markdown with branded template
         lines = [
-            f"# Motesart Number Conversion",
-            f"**File:** {conversion.get('filename')}",
-            f"**Key:** {conversion.get('key_signature')}",
-            f"**Time:** {conversion.get('time_signature')} | **Tempo:** {conversion.get('tempo')} BPM",
+            branded_header,
+            "=" * len(branded_header),
+            "",
+            f"# {title}",
+            f"**Key:** {key_sig}",
+            f"**Time:** {time_sig} | **Tempo:** {tempo} BPM",
+            f"**Type:** {CONTENT_TYPES.get(content_type, content_type)}",
             "",
             "## Sections & Progressions"
         ]
         
         for section in conversion.get("sections", []):
-            lines.append(f"- {section.get('name')}: {section.get('progression')}")
+            section_name = section.get("name", "Section")
+            progression = section.get("progression", "")
+            chords = section.get("chords", [])
+            
+            lines.append(f"\n### {section_name}")
+            if chords:
+                chord_str = " | ".join([c.get("symbol", "") for c in chords])
+                lines.append(chord_str)
+            elif progression:
+                lines.append(progression)
         
-        lines.extend(["", "## Chords"])
-        chords = conversion.get("chords", [])
-        chord_line = " | ".join([c.get("symbol", "") for c in chords])
-        lines.append(chord_line)
+        # All chords
+        all_chords = conversion.get("chords", [])
+        if all_chords:
+            lines.extend(["", "## All Chords"])
+            chord_line = " | ".join([c.get("symbol", "") for c in all_chords])
+            lines.append(chord_line)
         
-        lines.extend(["", "## Progressions Detected"])
-        for prog in conversion.get("progressions", []):
-            lines.append(f"- {prog.get('name')}: {prog.get('description')}")
+        # Progressions
+        progressions = conversion.get("progressions", [])
+        if progressions:
+            lines.extend(["", "## Progressions Detected"])
+            for prog in progressions:
+                lines.append(f"- {prog.get('name')}: {prog.get('description', '')}")
+        
+        # Footer legend
+        lines.extend(["", "---", MOTESART_LEGEND])
         
         content = "\n".join(lines)
         return StreamingResponse(
