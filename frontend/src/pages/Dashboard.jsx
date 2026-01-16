@@ -18,6 +18,7 @@ import {
   FileText,
   Clock,
   Printer,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,57 @@ import { Navbar } from "@/components/Navbar";
 import { toast } from "sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Motesart Logo URL
+const MOTESART_LOGO = "https://customer-assets.emergentagent.com/job_music-to-numbers/artifacts/eqmmw6fl_2316F097-7806-4D1F-AB36-BB5FF560800D.png";
+
+// Content type labels
+const CONTENT_TYPES = {
+  chord_chart: "Chord Chart / Lead Sheet",
+  traditional: "Traditional Sheet Music",
+  hymnal: "Hymnal / SATB",
+  lead_sheet: "Lead Sheet with Chords"
+};
+
+// Status labels and colors
+const STATUS_CONFIG = {
+  uploaded: {
+    label: "Uploaded",
+    sublabel: "OMR coming in Phase 2",
+    color: "yellow",
+    icon: Clock
+  },
+  converting_ocr: {
+    label: "Converting",
+    sublabel: "Step 1 of 2: Reading sheet music...",
+    color: "blue",
+    icon: Loader2
+  },
+  converting_motesart: {
+    label: "Converting",
+    sublabel: "Step 2 of 2: Generating numbers...",
+    color: "blue",
+    icon: Loader2
+  },
+  processing: {
+    label: "Processing",
+    sublabel: "Converting to Motesart...",
+    color: "blue",
+    icon: Loader2
+  },
+  completed: {
+    label: "Converted",
+    sublabel: "Ready to view",
+    color: "green",
+    icon: CheckCircle
+  },
+  error: {
+    label: "Error",
+    sublabel: "Conversion failed",
+    color: "red",
+    icon: AlertCircle
+  }
+};
 
 export default function Dashboard({ user }) {
   const navigate = useNavigate();
