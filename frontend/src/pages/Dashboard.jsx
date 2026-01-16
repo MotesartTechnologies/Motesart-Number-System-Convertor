@@ -692,43 +692,6 @@ export default function Dashboard({ user }) {
               </ScrollArea>
             </CardContent>
           </Card>
-                                      className="motesart-number"
-                                      title={`Pitch: ${note.pitch}, Beat: ${note.beat?.toFixed(2)}`}
-                                    >
-                                      {note.motesart_number}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* All Chords Summary */}
-                    {selectedConversion.chords?.length > 0 && (
-                      <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-700/50">
-                        <h4 className="text-sm font-medium text-slate-300 mb-3">
-                          All Chords
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedConversion.chords.map((chord, idx) => (
-                            <span
-                              key={idx}
-                              className="font-mono text-sm px-3 py-1.5 rounded-lg bg-neon-indigo/10 border border-neon-indigo/30 text-neon-indigo"
-                            >
-                              {chord.symbol}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
 
           {/* Progressions Strip */}
           <Card className="bg-slate-900/50 border-slate-800">
