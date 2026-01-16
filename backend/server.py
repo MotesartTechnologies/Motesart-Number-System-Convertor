@@ -71,7 +71,26 @@ class ExplainRequest(BaseModel):
     section_index: Optional[int] = None
     context: Optional[str] = None
 
+class EmailLoginRequest(BaseModel):
+    email: str
+    password: str
+
+class EmailRegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+
 # ==================== AUTH HELPERS ====================
+
+def hash_password(password: str) -> str:
+    """Hash password using bcrypt"""
+    import bcrypt
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify password against hash"""
+    import bcrypt
+    return bcrypt.checkpw(password.encode(), hashed.encode())
 
 async def get_current_user(request: Request) -> User:
     """Extract user from session token (cookie or header)"""
