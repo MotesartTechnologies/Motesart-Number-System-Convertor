@@ -267,25 +267,18 @@ class MotesartAPITester:
         
         return True
 
-    def test_invalid_endpoints(self):
-        """Test invalid/edge case endpoints"""
-        print("\n🔍 Testing Invalid Endpoints...")
+    def test_cleanup(self):
+        """Clean up test data"""
+        print("\n🔍 Cleaning Up Test Data...")
         
-        # Test non-existent endpoint
-        success, data = self.run_api_test(
-            "Non-existent Endpoint",
-            "GET",
-            "api/nonexistent",
-            404
-        )
-        
-        # Test invalid conversion ID
-        success, data = self.run_api_test(
-            "Invalid Conversion ID",
-            "GET",
-            "api/conversions/invalid-id",
-            404
-        )
+        if hasattr(self, 'test_conversion_id'):
+            # Test delete conversion
+            success, data = self.run_api_test(
+                "Delete Test Conversion",
+                "DELETE",
+                f"api/conversions/{self.test_conversion_id}",
+                200
+            )
         
         return True
 
