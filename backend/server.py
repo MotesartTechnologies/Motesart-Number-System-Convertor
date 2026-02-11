@@ -1614,10 +1614,10 @@ async def upload_file(file: UploadFile = File(...), user: User = Depends(get_cur
     Upload and convert a music file.
     
     Sheet-music first approach:
-    - Primary: PDF, PNG, JPG (sheet music images)
+    - Primary: PDF, PNG, JPG, HEIC (sheet music images)
     - Secondary: MusicXML, MIDI (digital music files)
     
-    For PDF/images: stores file and marks as "uploaded" (OMR processing in Phase 2)
+    For PDF/images: attempts OCR extraction, stores file for later OMR if needed
     For MIDI/MusicXML: immediate conversion to Motesart numbers
     """
     filename = file.filename or "unknown"
@@ -1626,24 +1626,30 @@ async def upload_file(file: UploadFile = File(...), user: User = Depends(get_cur
     if extension not in ALL_SUPPORTED:
         raise HTTPException(
             status_code=400, 
-            detail="Unsupported file type. Please upload sheet music (PDF, PNG, JPG) or music files (MusicXML, MIDI)."
+            detail="Unsupported file type. Please upload sheet music (PDF, PNG, JPG, HEIC) or music files (MusicXML, MIDI)."
         )
     
     content = await file.read()
     file_size = len(content)
     
+    # Convert HEIC to PNG if needed
+    original_extension = extension
+    if extension in ["heic", "heif"]:
+        content = await convert_heic_to_png(content)
+        extension = "png"  # Treat as PNG after conversion
+    
     conversion_id = f"conv_{uuid.uuid4().hex[:12]}"
     
     # Determine file category
-    is_sheet_music = extension in SUPPORTED_SHEET_MUSIC
-    initial_status = "uploaded" if is_sheet_music else "processing"
+    is_sheet_music = original_extension in SUPPORTED_SHEET_MUSIC
+    initial_status = "processing"
     
     # Save initial conversion record
     conversion_doc = {
         "conversion_id": conversion_id,
         "user_id": user.user_id,
         "filename": filename,
-        "file_type": extension,
+        "file_type": original_extension,
         "file_size": file_size,
         "is_sheet_music": is_sheet_music,
         "status": initial_status,
@@ -1651,18 +1657,57 @@ async def upload_file(file: UploadFile = File(...), user: User = Depends(get_cur
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
-    # For sheet music (PDF/images), store the file content for later OMR processing
-    if is_sheet_music:
-        import base64
-        conversion_doc["file_data"] = base64.b64encode(content).decode('utf-8')
-        conversion_doc["status_message"] = "Uploaded – waiting for conversion (OMR coming in Phase 2)"
+    # Store file content
+    import base64
+    conversion_doc["file_data"] = base64.b64encode(content).decode('utf-8')
     
     await db.conversions.insert_one(conversion_doc)
     
-    # For MIDI/MusicXML, process immediately
-    if not is_sheet_music:
-        try:
-            # Parse file based on type
+    # Process the file
+    try:
+        if is_sheet_music:
+            # Try to extract chords from PDF/images
+            if original_extension == "pdf":
+                extraction_result = await extract_text_from_pdf(content, filename)
+            else:
+                extraction_result = await extract_text_from_image(content, filename)
+            
+            if extraction_result.get("success"):
+                # Successfully extracted chords
+                await db.conversions.update_one(
+                    {"conversion_id": conversion_id},
+                    {"$set": {
+                        "status": "completed",
+                        "key_signature": extraction_result["key_signature"],
+                        "key_name": extraction_result.get("key_name", "C"),
+                        "key_root": extraction_result.get("key_root", 0),
+                        "chords": extraction_result["chords"],
+                        "sections": extraction_result["sections"],
+                        "content_type": "chord_chart",
+                        "time_signature": "4/4",
+                        "tempo": 120,
+                        "extraction_method": extraction_result.get("method", "ocr"),
+                        "raw_text": extraction_result.get("raw_text", ""),
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+            else:
+                # Could not extract chords - mark as uploaded for manual/Phase 2 OMR
+                await db.conversions.update_one(
+                    {"conversion_id": conversion_id},
+                    {"$set": {
+                        "status": "uploaded",
+                        "status_message": extraction_result.get("error", "Could not detect chords. Try the Text Converter for manual input."),
+                        "key_signature": "1 = C",
+                        "time_signature": "4/4",
+                        "tempo": 120,
+                        "chords": [],
+                        "sections": [],
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+        else:
+            # For MIDI/MusicXML, process immediately
             if extension in ["mid", "midi"]:
                 parsed_data = parse_midi_file(content)
             else:
@@ -1688,17 +1733,16 @@ async def upload_file(file: UploadFile = File(...), user: User = Depends(get_cur
                 }}
             )
             
-        except Exception as e:
-            logger.error(f"Conversion error: {str(e)}")
-            await db.conversions.update_one(
-                {"conversion_id": conversion_id},
-                {"$set": {
-                    "status": "error", 
-                    "error_message": str(e),
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }}
-            )
-            raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+    except Exception as e:
+        logger.error(f"Conversion error: {str(e)}")
+        await db.conversions.update_one(
+            {"conversion_id": conversion_id},
+            {"$set": {
+                "status": "error", 
+                "error_message": str(e),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
     
     # Return the conversion record (without file_data for response size)
     conversion_doc = await db.conversions.find_one(
