@@ -1474,8 +1474,139 @@ def convert_to_motesart(parsed_data: Dict) -> Dict:
 
 # Supported file types
 SUPPORTED_MUSIC_FILES = ["mid", "midi", "xml", "musicxml", "mxl"]
-SUPPORTED_SHEET_MUSIC = ["pdf", "png", "jpg", "jpeg"]
+SUPPORTED_SHEET_MUSIC = ["pdf", "png", "jpg", "jpeg", "heic", "heif"]
 ALL_SUPPORTED = SUPPORTED_MUSIC_FILES + SUPPORTED_SHEET_MUSIC
+
+async def convert_heic_to_png(content: bytes) -> bytes:
+    """Convert HEIC/HEIF image to PNG format"""
+    try:
+        from PIL import Image
+        from pillow_heif import register_heif_opener
+        register_heif_opener()
+        
+        img = Image.open(io.BytesIO(content))
+        output = io.BytesIO()
+        img.convert('RGB').save(output, format='PNG')
+        output.seek(0)
+        return output.read()
+    except ImportError:
+        logger.warning("pillow-heif not installed, storing HEIC as-is")
+        return content
+    except Exception as e:
+        logger.error(f"HEIC conversion error: {e}")
+        return content
+
+async def extract_text_from_image(content: bytes, filename: str) -> dict:
+    """
+    Extract text/chords from sheet music images using OCR.
+    Returns detected chords, key, and sections.
+    """
+    try:
+        # Try using Google Cloud Vision or pytesseract for OCR
+        import pytesseract
+        from PIL import Image
+        
+        img = Image.open(io.BytesIO(content))
+        text = pytesseract.image_to_string(img)
+        
+        if text.strip():
+            # Parse the extracted text for chord symbols
+            chord_pattern = re.compile(r'(?<![a-z])([A-G][#b]?(?:maj7|maj|min|m|M7|M|dim|aug|sus[24]?|add|13|11|9|7)*(?:/[A-G][#b]?)?)(?![a-z])', re.IGNORECASE)
+            chords_raw = chord_pattern.findall(text)
+            
+            if chords_raw:
+                # Detect key from chords
+                key_root, key_name = auto_detect_key(chords_raw)
+                
+                # Parse chords into Motesart notation
+                parsed_chords = []
+                for chord in chords_raw:
+                    parsed = parse_chord_symbol(chord, key_root)
+                    if parsed:
+                        parsed_chords.append(parsed)
+                
+                return {
+                    "success": True,
+                    "method": "ocr",
+                    "raw_text": text[:500],
+                    "key_signature": f"1 = {key_name}",
+                    "key_root": key_root,
+                    "key_name": key_name,
+                    "chords": parsed_chords,
+                    "sections": [{
+                        "name": "Main",
+                        "chords": parsed_chords,
+                        "progression": " - ".join([c["symbol"] for c in parsed_chords[:8]])
+                    }]
+                }
+        
+        return {"success": False, "error": "No chords detected in image"}
+        
+    except ImportError:
+        return {"success": False, "error": "OCR not available - pytesseract not installed"}
+    except Exception as e:
+        logger.error(f"Image OCR error: {e}")
+        return {"success": False, "error": str(e)}
+
+async def extract_text_from_pdf(content: bytes, filename: str) -> dict:
+    """
+    Extract text/chords from PDF files.
+    Tries text extraction first, then falls back to OCR on images.
+    """
+    try:
+        import fitz  # PyMuPDF
+        
+        doc = fitz.open(stream=content, filetype="pdf")
+        full_text = ""
+        
+        for page in doc:
+            full_text += page.get_text()
+        
+        if full_text.strip():
+            # Parse the extracted text for chord symbols
+            chord_pattern = re.compile(r'(?<![a-z])([A-G][#b]?(?:maj7|maj|min|m|M7|M|dim|aug|sus[24]?|add|13|11|9|7)*(?:/[A-G][#b]?)?)(?![a-z])', re.IGNORECASE)
+            chords_raw = chord_pattern.findall(full_text)
+            
+            if chords_raw:
+                # Detect key from chords
+                key_root, key_name = auto_detect_key(chords_raw)
+                
+                # Parse chords into Motesart notation
+                parsed_chords = []
+                for chord in chords_raw:
+                    parsed = parse_chord_symbol(chord, key_root)
+                    if parsed:
+                        parsed_chords.append(parsed)
+                
+                return {
+                    "success": True,
+                    "method": "pdf_text",
+                    "raw_text": full_text[:500],
+                    "key_signature": f"1 = {key_name}",
+                    "key_root": key_root,
+                    "key_name": key_name,
+                    "chords": parsed_chords,
+                    "sections": [{
+                        "name": "Main",
+                        "chords": parsed_chords,
+                        "progression": " - ".join([c["symbol"] for c in parsed_chords[:8]])
+                    }]
+                }
+        
+        # If no text found, try OCR on first page
+        if doc.page_count > 0:
+            page = doc[0]
+            pix = page.get_pixmap()
+            img_data = pix.tobytes()
+            return await extract_text_from_image(img_data, filename)
+        
+        return {"success": False, "error": "No chords detected in PDF"}
+        
+    except ImportError:
+        return {"success": False, "error": "PDF extraction not available - PyMuPDF not installed"}
+    except Exception as e:
+        logger.error(f"PDF extraction error: {e}")
+        return {"success": False, "error": str(e)}
 
 @api_router.post("/upload")
 async def upload_file(file: UploadFile = File(...), user: User = Depends(get_current_user)):
