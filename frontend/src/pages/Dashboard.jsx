@@ -751,19 +751,21 @@ export default function Dashboard({ user }) {
                 </div>
               ) : (manualConversionResult?.sections?.length > 0 || 
                    manualConversionResult?.all_chords?.length > 0 ||
+                   livePreviewResult?.sections?.length > 0 ||
                    selectedConversion?.sections?.length > 0 || 
                    selectedConversion?.chords?.length > 0) ? (
                 <MotesartPreview
                   songData={{
                     title: selectedConversion?.title || selectedConversion?.filename?.split('.')[0] || 'Untitled',
                     artist: selectedConversion?.artist,
-                    sections: manualConversionResult?.sections || selectedConversion?.sections || [],
-                    all_chords: manualConversionResult?.all_chords || selectedConversion?.chords || [],
+                    sections: manualConversionResult?.sections || livePreviewResult?.sections || selectedConversion?.sections || [],
+                    all_chords: manualConversionResult?.all_chords || livePreviewResult?.all_chords || selectedConversion?.chords || [],
                     measures: [],
                   }}
                   conversionId={selectedConversion?.conversion_id}
                   keySignature={
                     (manualConversionResult?.key_name) || 
+                    (livePreviewResult?.key_name) ||
                     (selectedConversion?.key_name) ||
                     (selectedConversion?.key_signature?.replace('1 = ', '')) || 
                     'C'
