@@ -3,6 +3,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import LandingPage from "@/pages/LandingPage";
 import Dashboard from "@/pages/Dashboard";
+import ConverterPage from "@/pages/ConverterPage";
 import LoginPage from "@/pages/LoginPage";
 import LearnPage from "@/pages/LearnPage";
 import { Toaster } from "@/components/ui/sonner";
