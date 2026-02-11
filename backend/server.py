@@ -1849,8 +1849,6 @@ async def update_conversion_manual(
         {"_id": 0, "file_data": 0}
     )
     return updated
-        raise HTTPException(status_code=404, detail="Conversion not found")
-    return conversion
 
 @api_router.delete("/conversions/{conversion_id}")
 async def delete_conversion(conversion_id: str, user: User = Depends(get_current_user)):
