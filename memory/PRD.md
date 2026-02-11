@@ -16,19 +16,29 @@ Build a multi-step "Motesart Number System Converter" app that supports:
 3. **Church Musicians** - Converting hymnals and chord charts
 4. **Worship Leaders** - Converting lead sheets like "Send Me"
 
-## Methodology Rules
+## Core Conversion Rules (IMPLEMENTED)
 
-### Extensions (Section 5)
-- Extensions do NOT introduce new numbers
-- Written as superscripts: 2⁹, 4¹¹, 6¹³
-- Think in 2, 4, 6 relative to scale
+### Rule §3: Half-Numbers
+- **For melodic notes**: Valid are 1½, 2½, 4½, 5½, 6½ (NEVER 3½ or 7½)
+- **For chord roots**: Use flat/sharp notation (♭2, ♭3, ♯4, ♯5, ♭7)
 
-### Inversions (Section 7) - BASS FIRST, CHORD SECOND
-- 1/3 = 1 in bass, 3-chord above
-- 1/5 = 1 in bass, 5-chord above
-- 1/7 = 1 in bass, 7-chord above
+### Rule §6: Chord Quality Inference
+- **Minor chords**: ALWAYS marked with 'm' (Em → 6m, Am → 2m)
+- **Major chords**: Add 'M' ONLY if non-diatonic (F in G → ♭7M)
+- **Diatonic major**: No modifier (G in G → 1, C in G → 4)
+- **Diminished**: '°' symbol
+- **Augmented**: '⁺' symbol
 
-### Symbol Legend
+### Rule §7: Inversions - chord/bass Format
+- Slash chords: chord/bass (NOT bass/chord)
+- G/B in key of G → 1/3 (1-chord with 3 in bass)
+- D/F# in key of G → 5/7 (5-chord with 7 in bass)
+
+### Rule §4c: Extensions with Superscripts
+- 7→⁷, 9→⁹, 11→¹¹, 13→¹³
+- Maj7: M⁷, Min7: m⁷, Dom7: ⁷
+
+## Symbol Legend
 - m → minor chord
 - M → major chord (non-diatonic only)
 - ⁺ → augmented chord
@@ -38,22 +48,7 @@ Build a multi-step "Motesart Number System Converter" app that supports:
 - sus⁴ → suspended 4
 - ⁷ → seventh chord
 - /X → bass note (slash notation)
-- ½ → chromatic step up
-
-## Status Flow
-1. `uploaded` - File stored (PDF/images wait for OMR)
-2. `converting_ocr` - Reading sheet music (Phase 2)
-3. `converting_motesart` - Generating numbers
-4. `completed` - Ready to view
-5. `error` - Conversion failed
-
-## Branded Template
-All outputs include:
-- Header: "Converted by Motesart Technologies — Motesart Number System v1.0"
-- Logo: C → 1 concept image
-- Song title and key signature
-- Sections with progressions
-- Symbol legend footer
+- ♭X / ♯X → chromatic chord roots
 
 ## What's Been Implemented
 
@@ -65,7 +60,7 @@ All outputs include:
 - **Export Formats**: PDF, CSV, Text with branding
 - **Dual Authentication**: Google OAuth + Email/Password
 
-### Phase 1.4 - January 17, 2026 (Current)
+### Phase 1.4 - January 17, 2026
 - **Multi-User Avatar System** ✅
   - Unique DiceBear avatars for each user (based on user_id seed)
   - Custom avatar upload with base64 storage
@@ -77,11 +72,68 @@ All outputs include:
   - Username automatically set to "Motesart"
   - Special Motesart logo avatar
   - Golden crown icon in UI
-- **UI Avatar Integration** ✅
-  - Navbar displays user avatar with initials fallback
-  - Crown icon for founder only
-  - User dropdown shows avatar, display name, email
-  - `computed_avatar` and `display_name` in all auth responses
+
+### Phase 1.5 - February 11, 2026 (CURRENT)
+- **Text Converter Page** ✅
+  - New /converter route for text-based chord chart conversion
+  - 3-column layout: Input Panel (left), Output Panel (center), Settings (right)
+  - Auto key detection from chord patterns
+  - Manual key selection (Auto-detect, C through B)
+  - Time signature selector
+  - Color-coded output:
+    - Section headers [Verse], [Chorus]: purple (#a78bfa)
+    - Chord numbers: gold/amber (#fbbf24)
+    - Lyrics: gray (#9ca3af)
+  - Settings toggles: half-numbers, octave markers, roman numerals
+  - Copy to clipboard functionality
+  - Example loaders (Simple Hymn, Pop Song, Jazz Standard)
+  - Conversion Rules reference panel
+
+- **Core Conversion Engine** ✅
+  - Rule §3 Half-Numbers: ♭/♯ notation for chromatic chord roots
+  - Rule §6 Chord Quality: 'm' always for minor, 'M' only for non-diatonic major
+  - Rule §7 Inversions: chord/bass format (G/B → 1/3)
+  - Rule §4c Extensions: Superscripts (Cmaj7 → 1M⁷, Dm7 → 2m⁷)
+  - Smart regex: Avoids detecting chords within words (Amazing ≠ Am)
+
+## Application Routes
+- `/` - Landing page
+- `/login` - Login/Register page
+- `/converter` - **NEW** Text-based chord chart converter
+- `/dashboard` - File upload converter (MIDI, MusicXML, etc.)
+- `/upload` - Alias for dashboard
+- `/learn` - Methodology explanation page
+
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - Email registration
+- `POST /api/auth/login` - Email login
+- `POST /api/auth/session` - Google OAuth session exchange
+- `GET /api/auth/me` - Get current user with avatar
+- `POST /api/auth/logout` - Clear session
+- `PUT /api/auth/profile` - Update username/name
+- `POST /api/auth/avatar` - Upload custom avatar
+- `DELETE /api/auth/avatar` - Revert to default avatar
+
+### Text Conversion (NEW)
+- `POST /api/convert/text` - Convert chord chart text to Motesart numbers
+  - Params: `text`, `key` (optional), `time_signature`, `show_half_numbers`
+  - Returns: `key`, `chord_count`, `sections[]` with converted lines
+- `GET /api/keys` - Get list of available keys
+
+### File Conversions
+- `POST /api/upload` - Upload and convert file (MIDI, MusicXML)
+- `GET /api/conversions` - List user's conversions
+- `GET /api/conversions/{id}` - Get single conversion
+- `DELETE /api/conversions/{id}` - Delete conversion
+- `GET /api/conversions/{id}/file` - Get original file
+
+### Export
+- `GET /api/export/{id}?format=pdf|csv|text` - Export with branding
+
+### AI
+- `POST /api/explain` - Generate AI explanation (GPT-5.2 via Emergent LLM Key)
 
 ## Database Schema
 
@@ -116,55 +168,54 @@ All outputs include:
 }
 ```
 
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Email registration (returns avatar fields)
-- `POST /api/auth/login` - Email login (returns avatar fields)
-- `POST /api/auth/session` - Google OAuth session exchange
-- `GET /api/auth/me` - Get current user with avatar
-- `POST /api/auth/logout` - Clear session
-- `PUT /api/auth/profile` - Update username/name
-- `POST /api/auth/avatar` - Upload custom avatar
-- `DELETE /api/auth/avatar` - Revert to default avatar
-
-### Conversions
-- `POST /api/upload` - Upload and convert file
-- `GET /api/conversions` - List user's conversions
-- `GET /api/conversions/{id}` - Get single conversion
-- `DELETE /api/conversions/{id}` - Delete conversion
-- `GET /api/conversions/{id}/file` - Get original file (for PDF/image display)
-
-### Export
-- `GET /api/export/{id}?format=pdf|csv|text` - Export with branding
-
-### AI
-- `POST /api/explain` - Generate AI explanation (GPT-5.2 via Emergent LLM Key)
-
 ## Test Credentials
 - Regular user: `testuser@example.com` / `test123456`
 - Founder user: `motesartproductions@gmail.com` / `founder123456`
 
+## Test Reports
+- `/app/test_reports/iteration_5.json` - Avatar system tests (100% pass)
+- `/app/test_reports/iteration_6.json` - Converter tests (100% pass)
+- `/app/tests/test_motesart_converter.py` - Conversion rule tests
+
 ## Prioritized Backlog
 
-### P0 (Immediate - This Session)
+### P0 (Complete)
 - [x] Multi-user avatar system with unique icons
 - [x] Founder special handling (crown, Motesart avatar)
-- [ ] Clean up state on re-login (ensure selectedConversion resets)
+- [x] Text-based chord chart converter with exact rules
 
-### P1 (Phase 2)
+### P1 (Next)
+- [ ] Clean up state on re-login (ensure selectedConversion resets)
+- [ ] Save text conversions to database
+- [ ] Export converted text to PDF/CSV
+
+### P2 (Phase 2)
 - [ ] OMR integration (Audiveris/ScanScore) for PDF/image conversion
 - [ ] Hymnal SATB analysis for bass line chord detection
 - [ ] Airtable integration for T.A.M.i dashboard
 - [ ] Leaderboard page with user avatars and rankings
 
-### P2 (Future)
-- [ ] Roman numeral side-by-side view
+### P3 (Future)
+- [ ] Roman numeral side-by-side view (toggle in settings)
 - [ ] Real-time playback
 - [ ] Collaborative features
 - [ ] Multiple avatar style options (DiceBear styles)
 
 ## Technical Notes
+
+### Chord Pattern Regex
+```python
+# Avoids matching chords within words using negative lookahead/lookbehind
+r'(?<![a-z])([A-G][#b]?(?:maj7|maj|min|m|M7|M|dim|aug|sus[24]?|add|13|11|9|7)*(?:/[A-G][#b]?)?)(?![a-z])'
+```
+
+### Diatonic Chord Detection
+```python
+DIATONIC_QUALITIES = {
+    1: 'major', 2: 'minor', 3: 'minor', 4: 'major', 
+    5: 'major', 6: 'minor', 7: 'diminished'
+}
+```
 
 ### Avatar Generation
 Using DiceBear Initials API for unique avatars:
@@ -173,18 +224,16 @@ https://api.dicebear.com/7.x/initials/svg?seed={user_id}&chars=2&backgroundColor
 ```
 
 ### Founder Detection
-Email-based detection in `check_is_founder()`:
-```python
-MOTESART_FOUNDER_EMAIL = "motesartproductions@gmail.com"
-```
+Email-based detection: `motesartproductions@gmail.com`
 
 ### CORS Configuration
-Fixed CORS to allow localhost:3000 with credentials:
 ```python
 allow_origins=["http://localhost:3000", "https://music2numbers.preview.emergentagent.com"]
 ```
 
-## Next Action Items
-1. Address state reset issue on re-login (P1)
-2. Plan Phase 2 OMR integration
-3. Design leaderboard page with user avatars
+## Files of Reference
+- `/app/backend/server.py` - All backend logic (conversion engine, auth, API endpoints)
+- `/app/frontend/src/pages/ConverterPage.jsx` - Text converter UI
+- `/app/frontend/src/pages/Dashboard.jsx` - File upload UI
+- `/app/frontend/src/components/Navbar.jsx` - Navigation with avatar/crown
+- `/app/frontend/src/App.js` - Router configuration
