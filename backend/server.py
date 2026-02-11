@@ -521,7 +521,9 @@ def get_note_number(pitch: int, key_root: int) -> str:
 def semitone_to_degree(semitones: int) -> tuple:
     """
     Convert semitones from root to scale degree and whether it's chromatic.
-    Returns (degree_number, is_chromatic, half_number_symbol)
+    For CHORD ROOTS (not melodic notes), we use flat/sharp notation for chromatic tones.
+    
+    Returns (degree_number, is_chromatic, display_symbol)
     """
     semitones = semitones % 12
     
@@ -530,14 +532,37 @@ def semitone_to_degree(semitones: int) -> tuple:
         degree = MAJOR_SCALE_SEMITONES.index(semitones) + 1
         return (degree, False, str(degree))
     
-    # Chromatic - use half-numbers
-    half_symbol = HALF_NUMBER_MAP.get(semitones)
-    if half_symbol:
-        base_degree = int(half_symbol[0])
-        return (base_degree, True, half_symbol)
+    # Chromatic chord roots - use flat/sharp notation
+    # This is different from melodic half-numbers
+    chromatic_chord_root_map = {
+        1: "♭2",   # C# in C = flat 2 (enharmonic)
+        3: "♭3",   # D# in C = flat 3 (actually enharmonic Eb)
+        6: "♯4",   # F# in C = sharp 4
+        8: "♯5",   # G# in C = sharp 5 (or flat 6)
+        10: "♭7",  # A# in C = flat 7 (actually Bb)
+    }
     
-    # Fallback for edge cases
-    return (0, True, f"?{semitones}")
+    symbol = chromatic_chord_root_map.get(semitones, f"?{semitones}")
+    # Extract the base degree for analysis
+    base_degree = int(symbol[-1]) if symbol[-1].isdigit() else 0
+    
+    return (base_degree, True, symbol)
+
+def semitone_to_melodic_number(semitones: int) -> str:
+    """
+    Convert semitones from root to Motesart melodic number.
+    Rule §3: Only valid half-numbers are 1½, 2½, 4½, 5½, 6½ (never 3½ or 7½)
+    
+    This is for MELODIC notes, not chord roots.
+    """
+    semitones = semitones % 12
+    
+    # Check if it's a diatonic scale degree
+    if semitones in MAJOR_SCALE_SEMITONES:
+        return str(MAJOR_SCALE_SEMITONES.index(semitones) + 1)
+    
+    # Half-numbers for chromatic tones (Rule §3)
+    return HALF_NUMBER_MAP.get(semitones, f"?{semitones}")
 
 def is_diatonic_chord(root_semitones: int, quality: str, key_root: int) -> bool:
     """
