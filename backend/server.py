@@ -2127,8 +2127,6 @@ async def export_conversion(
                 "¹¹": "11", "¹³": "13",
                 "♭": "b", "♯": "#", "♮": "",
                 "♩": "", "♪": "", "♫": "", "♬": "",
-                "\u266d": "b",  # flat symbol
-                "\u266f": "#",  # sharp symbol
             }
             for old, new in replacements.items():
                 s = s.replace(old, new)
