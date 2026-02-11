@@ -385,7 +385,7 @@ export default function Dashboard({ user }) {
 
   // Get file type icon
   const getFileIcon = (fileType) => {
-    if (["pdf", "png", "jpg", "jpeg"].includes(fileType)) {
+    if (["pdf", "png", "jpg", "jpeg", "heic", "heif"].includes(fileType)) {
       return <FileImage className="w-4 h-4 text-neon-pink" />;
     }
     if (["mid", "midi"].includes(fileType)) {
