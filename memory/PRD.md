@@ -23,35 +23,41 @@ Build a multi-step "Motesart Number System Converter" app that supports:
 ### Phase 1.6 - February 11, 2026
 - Bug Fixes: Explain AI, Chat Section, PDF/Image OCR, HEIC Support
 
-### Phase 1.7 - February 11, 2026 (CURRENT)
-**Complete Dashboard Reorganization:**
+### Phase 1.7 - February 11, 2026
+- Complete Dashboard Reorganization with Manual Entry fallback
+- Scrollable right column layout
 
-1. **Motesart Conversion Display Panel** ✅
-   - Prominent 65% width on right column
-   - Key signature in large amber text (e.g., "1 = G")
-   - Section headers [Verse], [Chorus] in purple
-   - Chord badges with symbols in gold/amber
-   - Symbol legend at bottom
-   - Motesart branding header
+### Phase 1.8 - February 11, 2026 (CURRENT)
+**Visual Preview Implementation:**
 
-2. **Manual Entry Fallback** ✅
-   - "Manual Entry" button in header
-   - Key selector dropdown (12 keys: C through B)
-   - Chord symbols textarea input
-   - "Convert to Motesart Numbers" button
-   - Updates conversion in database via PUT endpoint
-   - Appears automatically when OCR fails
+1. **Lead Sheet View (Format B)** ✅
+   - Title in purple/violet
+   - Key signature "1 = Ab" in amber/gold
+   - Section labels [Verse], [Chorus] in purple
+   - Chord numbers in gold above lyrics
+   - Scale Reference box with all 7 degrees
+   - Progression summary boxes per section
+   - Legend at bottom
 
-3. **Scrollable Right Column** ✅
-   - `max-h-[calc(100vh-5rem)]` with `overflow-y-auto`
-   - All panels accessible via scroll
-   - No content cut off at bottom
+2. **Manual Entry Live Preview** ✅
+   - Debounced 500ms live preview as user types
+   - Key and Time signature selectors
+   - Section detection ([Verse], [Chorus])
+   - Instant Motesart conversion display
+   - "Apply to Preview" button to confirm
 
-4. **New 2-Column Layout** ✅
-   - Left column (35%): Upload, Recent Files, Settings
-   - Right column (65%): Conversion, AI Chat, Export
-   - Dark theme `#0a0a1a` background
-   - Cards `#12122a` with `rounded-xl`
+3. **Export Matches Visual Preview** ✅
+   - PDF export with Lead Sheet format
+   - Text export with sections and lyrics
+   - Scale reference box in exports
+   - Progression summaries included
+
+4. **Basic Staff View (Phase 1)** ✅
+   - 5-line staff with treble clef
+   - Chord numbers above staff
+   - Note positions on staff lines
+   - Section labels rendered
+   - Bar lines and double bar at end
 
 ## Application Routes
 - `/` - Landing page
@@ -76,7 +82,7 @@ Build a multi-step "Motesart Number System Converter" app that supports:
 - `POST /api/upload` - Upload file (PDF, PNG, JPG, HEIC, MIDI, MusicXML)
 - `GET /api/conversions` - List user's conversions
 - `GET /api/conversions/{id}` - Get single conversion
-- `PUT /api/conversions/{id}/manual` - **NEW** Update with manual entry data
+- `PUT /api/conversions/{id}/manual` - Update with manual entry data
 - `DELETE /api/conversions/{id}` - Delete conversion
 - `GET /api/conversions/{id}/file` - Get original file
 
@@ -85,7 +91,7 @@ Build a multi-step "Motesart Number System Converter" app that supports:
 - `POST /api/chat` - Chat with AI about music
 
 ### Export
-- `GET /api/export/{id}?format=pdf|csv|text`
+- `GET /api/export/{id}?format=pdf|csv|text` - Export with visual preview match
 
 ## Conversion Rules
 
@@ -94,7 +100,7 @@ Build a multi-step "Motesart Number System Converter" app that supports:
 - Chromatic chord roots use ♭/♯ notation
 
 ### Rule §6: Chord Quality
-- Minor: ALWAYS marked with 'm'
+- Minor: ALWAYS marked with 'm' (e.g., Em → 6m)
 - Major: 'M' ONLY if non-diatonic
 - Diatonic major: no modifier
 
@@ -109,27 +115,20 @@ Build a multi-step "Motesart Number System Converter" app that supports:
 - Founder user: `motesartproductions@gmail.com` / `founder123456`
 
 ## Test Reports
-- `/app/test_reports/iteration_5.json` - Avatar system (100%)
-- `/app/test_reports/iteration_6.json` - Text converter (100%)
-- `/app/test_reports/iteration_7.json` - Bug fixes (100%)
-- `/app/test_reports/iteration_8.json` - Dashboard reorganization (100%)
+- `/app/test_reports/iteration_9.json` - Lead Sheet View & Live Preview (100%)
 
 ## Prioritized Backlog
 
 ### P0 (Complete)
-- [x] Multi-user avatar system
-- [x] Text-based chord chart converter
-- [x] Explain AI button
-- [x] Chat section on File Upload page
-- [x] HEIC file support
-- [x] Dashboard reorganization with Manual Entry
-- [x] Prominent Motesart Conversion display
-- [x] Scrollable right column
+- [x] Lead Sheet View (Format B) rendering
+- [x] Manual Entry with live preview
+- [x] Export matches visual preview
+- [x] Basic Staff View (Phase 1)
 
 ### P1 (Next)
-- [ ] Improve OCR accuracy with music-specific preprocessing
+- [ ] Try Audiveris or music21 for improved OMR
+- [ ] Enhanced Staff View with rhythmic notation
 - [ ] Save chat history per conversion
-- [ ] "Detect Key from Image" using image analysis
 
 ### P2 (Phase 2)
 - [ ] Full OMR integration (Audiveris) for staff notation
@@ -144,7 +143,13 @@ Build a multi-step "Motesart Number System Converter" app that supports:
 
 ## Files of Reference
 - `/app/backend/server.py` - Backend with all endpoints
-- `/app/frontend/src/pages/Dashboard.jsx` - File upload dashboard
+- `/app/frontend/src/pages/Dashboard.jsx` - File upload dashboard with live preview
 - `/app/frontend/src/pages/ConverterPage.jsx` - Text converter
+- `/app/frontend/src/components/LeadSheetView.jsx` - Lead sheet format display
+- `/app/frontend/src/components/StaffNotationView.jsx` - Staff notation canvas
+- `/app/frontend/src/components/MotesartPreview.jsx` - Preview container with toolbar
 - `/app/frontend/src/components/Navbar.jsx` - Navigation
-- `/app/backend/tests/test_dashboard_reorganization.py` - Dashboard tests
+
+## Known Issues
+- **OMR Pipeline:** Optical Music Recognition for PDF/images still unreliable. Current implementation uses pytesseract which works for chord chart text but not for traditional sheet music notation.
+- **Workaround:** Manual Entry provides reliable chord input and live preview functionality.
