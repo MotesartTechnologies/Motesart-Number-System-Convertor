@@ -132,6 +132,8 @@ export default function Dashboard({ user }) {
   const [manualKey, setManualKey] = useState("C");
   const [isConvertingManual, setIsConvertingManual] = useState(false);
   const [manualConversionResult, setManualConversionResult] = useState(null);
+  const [livePreviewResult, setLivePreviewResult] = useState(null);
+  const livePreviewTimeoutRef = useRef(null);
   
   // Chat state
   const [chatMessages, setChatMessages] = useState([]);
