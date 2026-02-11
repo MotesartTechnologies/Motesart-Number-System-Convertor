@@ -26,6 +26,8 @@ import {
   Edit3,
   Key,
   Keyboard,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Navbar } from "@/components/Navbar";
+import { MotesartPreview } from "@/components/MotesartPreview";
 import { toast } from "sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
