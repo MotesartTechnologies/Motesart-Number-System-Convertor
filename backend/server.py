@@ -2204,8 +2204,9 @@ async def export_conversion(
         pdf.set_text_color(80, 80, 80)
         pdf.multi_cell(0, 5, MOTESART_LEGEND)
         
-        pdf_output = io.BytesIO()
-        pdf.output(pdf_output)
+        # fpdf.output() returns bytes when dest='S'
+        pdf_bytes = pdf.output(dest='S').encode('latin-1')
+        pdf_output = io.BytesIO(pdf_bytes)
         pdf_output.seek(0)
         
         return StreamingResponse(
