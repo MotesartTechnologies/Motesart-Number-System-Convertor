@@ -101,6 +101,16 @@ class ExplainRequest(BaseModel):
     section_index: Optional[int] = None
     context: Optional[str] = None
 
+class ChatMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+    timestamp: Optional[str] = None
+
+class ChatRequest(BaseModel):
+    conversion_id: str
+    message: str
+    history: List[ChatMessage] = []
+
 class EmailLoginRequest(BaseModel):
     email: str
     password: str
