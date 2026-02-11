@@ -476,7 +476,7 @@ export default function Dashboard({ user }) {
                 </p>
               </div>
               <p className="text-xs text-slate-600 mt-3 text-center">
-                Supported: PDF, PNG, JPG, MusicXML, MIDI
+                Supported: PDF, PNG, JPG, HEIC, MusicXML, MIDI
               </p>
             </CardContent>
           </Card>
