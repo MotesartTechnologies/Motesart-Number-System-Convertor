@@ -97,6 +97,25 @@ export default function Dashboard({ user }) {
     showOctaveMarkers: false,
     showRomanNumerals: false,
   });
+  
+  // Chat state
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isSendingChat, setIsSendingChat] = useState(false);
+  const chatScrollRef = useRef(null);
+
+  // Scroll chat to bottom when new messages arrive
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  // Reset chat when conversion changes
+  useEffect(() => {
+    setChatMessages([]);
+    setExplanation("");
+  }, [selectedConversion?.conversion_id]);
 
   // Fetch conversions - always refresh on mount
   const fetchConversions = useCallback(async (selectFirst = false) => {
