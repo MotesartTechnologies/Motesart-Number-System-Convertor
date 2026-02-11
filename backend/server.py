@@ -1805,9 +1805,50 @@ async def get_conversion(conversion_id: str, user: User = Depends(get_current_us
     """Get a specific conversion"""
     conversion = await db.conversions.find_one(
         {"conversion_id": conversion_id, "user_id": user.user_id},
+        {"_id": 0, "file_data": 0}
+    )
+    if not conversion:
+        raise HTTPException(status_code=404, detail="Conversion not found")
+    return conversion
+
+class ManualConversionUpdate(BaseModel):
+    key_signature: str
+    key_name: str
+    chords: List[Dict] = []
+    sections: List[Dict] = []
+
+@api_router.put("/conversions/{conversion_id}/manual")
+async def update_conversion_manual(
+    conversion_id: str,
+    update: ManualConversionUpdate,
+    user: User = Depends(get_current_user)
+):
+    """Update a conversion with manually entered chord data"""
+    conversion = await db.conversions.find_one(
+        {"conversion_id": conversion_id, "user_id": user.user_id},
         {"_id": 0}
     )
     if not conversion:
+        raise HTTPException(status_code=404, detail="Conversion not found")
+    
+    await db.conversions.update_one(
+        {"conversion_id": conversion_id},
+        {"$set": {
+            "status": "completed",
+            "key_signature": update.key_signature,
+            "key_name": update.key_name,
+            "chords": update.chords,
+            "sections": update.sections,
+            "manual_entry": True,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    updated = await db.conversions.find_one(
+        {"conversion_id": conversion_id},
+        {"_id": 0, "file_data": 0}
+    )
+    return updated
         raise HTTPException(status_code=404, detail="Conversion not found")
     return conversion
 
