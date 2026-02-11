@@ -1,172 +1,158 @@
-<analysis>**original_problem_statement:** 
-The user wants to build a multi-step Motesart Number System Converter application. The core functionality is to allow users to upload music files (Image, PDF, MusicXML, MIDI), have the system auto-detect the key, notes, and chords, and then convert this information into the Motesart Number System.
+<analysis>**original_problem_statement:**
+The user wants to build a Motesart Number System Converter application. The core functionality is to allow users to upload music files (Image, PDF, MusicXML, MIDI, HEIC) or enter chord charts manually, have the system auto-detect the key, notes, and chords, and then convert this information into the Motesart Number System.
 
 **PRODUCT REQUIREMENTS:**
-- **Inputs:** Support various file types including JPG, PNG, PDF, MIDI, and MusicXML.
-- **Conversion Logic:** Implement the T.A.M.i rules from the user-provided methodology documents. This includes key detection, note-to-number mapping using scale degrees and half-numbers, and chord/progression identification.
-- **Outputs:** The application should display:
-    - The original score/file view.
-    - A Motesart Number Staff showing the converted numbers and chords.
-    - A Progression Strip for common patterns (e.g., 2-5-1).
-    - An Explain Panel using AI (GPT-5.2) to describe the musical concepts in plain language.
-- **Dashboard:** A three-column layout for Uploads/Original, Motesart View, and Explanations/Settings.
-- **Authentication:** User accounts are required, with the initial preference for Google Auth, later expanded to include email/password.
-- **Export:** Users should be able to export the conversion as PDF, CSV, and Text.
-- **Phased Rollout:**
-    - **Phase 1 (MVP):** Focus on MIDI and MusicXML parsing, basic conversion and chord detection, and a two-panel UI with text/PDF export.
-    - **Phase 2:** Add Optical Music Recognition (OMR) for image/PDF files, a full Explain Panel, and key-change detection.
-- **User-Specific Data:** Each user should have their own file history (Recent Files).
-- **Branding:** All outputs and UI elements should use the Motesart logo and a consistent branded template.
-- **Avatar System:** Implement unique avatars for each user, with special handling for the Motesart founder account (unique avatar and crown icon).
+- **Inputs:** Support various file types (JPG, PNG, PDF, MIDI, MusicXML, HEIC) and manual text entry of chord charts.
+- **Conversion Logic:** Implement the T.A.M.i rules from the user-provided methodology documents. This includes key detection, note-to-number mapping (including half-numbers), chord quality inference (m, M, ᵒ, ⁺), extensions (⁷, ⁹), and inversions (e.g., 1/3).
+- **Visual Outputs:** The application must provide two main visual output formats on-screen before download:
+    - **Format A (Staff Notation):** For sheet music uploads, render the original staff with Motesart numbers replacing the note heads, preserving rhythm and vertical position.
+    - **Format B (Lead Sheet):** For chord chart inputs, display a clean text-based layout with Motesart numbers above the corresponding lyrics.
+- **Dashboard & UI:**
+    - A reorganized dashboard with a primary focus on the visual Motesart Conversion panel.
+    - A collapsible Original File Preview at the bottom.
+    - AI Explain and Chat panels for interacting with the conversion.
+    - A Manual Entry button as a fallback for failed OMR.
+    - A separate /converter page for text-based conversion.
+- **OMR (Optical Music Recognition):** The system must attempt to extract key, chords, notes, and lyrics from uploaded PDF/Image/HEIC files. This has been a persistent problem area.
+- **Authentication:** A complete user account system with Google Auth and email/password, including a multi-user avatar system with special handling for the Motesart founder account (crown icon).
+- **Export:** Users should be able to export the visual conversion as PDF, PNG, and copy the text. The exported file must match the on-screen preview.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack FastAPI and React application named Motesart Converter has been built. It includes:
-- **Authentication:** A complete authentication system supporting both Emergent-managed Google Auth and standard email/password registration and login.
-- **Backend:** A robust backend that can parse MIDI and MusicXML files, convert them according to the specified Motesart methodology (including updated rules for extensions and inversions), and save conversion records to MongoDB. It also handles file uploads for PDF/Image, storing them for future processing. The backend serves a  endpoint and all necessary API routes for auth, file management, and conversion.
-- **Frontend:** A multi-page React application with a dark, modern theme. It includes a landing page, a learn page explaining the methodology, a login/register page, and the main converter dashboard. The dashboard features a sheet-music first file upload component, a Recent Files list for the logged-in user, and a detailed view for completed conversions that displays the output in a branded template.
-- **File Handling:** The application successfully converts MIDI and MusicXML files. PDF and image files are accepted, stored, and displayed in the Recent Files list with a status indicating that OMR conversion is a Phase 2 feature.
-- **Export:** The backend can generate and export conversions in PDF, Text, and CSV formats, all following a branded template.
+The project is a full-stack FastAPI/React application. It features a complete dual authentication system (Google/email), a multi-user avatar system, and a robust backend conversion engine for MIDI, MusicXML, and text-based chord charts. The file upload dashboard has been completely reorganized to prioritize a large visual conversion preview area. It supports uploading various file types including HEIC. The system includes an Explain with AI feature and a chat panel powered by GPT-5.2. OMR for PDF/images has been attempted by integrating  and , but its reliability is still a major issue. The frontend components for the two required visual output formats ( and ) have been created and integrated into a new  component on the dashboard.
 
 **Last working item**:
-- Last item agent was working: The agent was about to begin implementing a new feature requested by the user: a multi-user avatar system. This involves creating unique avatars for each user (uploaded or generated), displaying them throughout the UI, and adding special logic to display a unique avatar and crown icon for the Motesart founder account. Before this, the agent had just fixed several UI bugs, including adding the Motesart logo to all pages and ensuring the dashboard state resets when a new file is uploaded.
-- Status: NOT STARTED
+- Last item agent was working: The agent was implementing two new visual conversion output formats as requested by the user: Staff Notation with Numbers (Format A) and Lead Sheet / Chord Chart with Numbers (Format B). It created the required React components (, , ) and integrated them into the redesigned . The goal was to provide a rich, on-screen visual preview of the conversion before any download.
+- Status: IN PROGRESS
 - Agent Testing Done: N
 - Which testing method agent to use? both
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- Issue 1: User confusion about PDF/image conversion status (P0)
-- Issue 2: State may not reset on re-login (P1)
-- Issue 3: PDF Export Unicode Errors (P2)
+- Issue 1: OMR chord detection is not working reliably (P0)
+- Issue 2: Visual Staff Notation view (Format A) is not fully implemented (P1)
 
 Issues Detail:
 - Issue 1:
-    - Attempted fixes: The agent has updated the status messages in the UI to explicitly state that OMR for PDF/image files is a Phase 2 feature and the current status is Uploaded or Awaiting Conversion. However, the user's last message (The conversion is not working) indicates this might not be clear enough.
-    - Next debug checklist: 
-        1. Review the status display on .
-        2. Make the status message even more prominent and unambiguous, perhaps in the main view panel when a non-convertible file is selected. For example: This PDF has been saved. Automatic conversion of sheet music from PDFs is coming in Phase 2.
-        3. Ensure the Explain Panel for these files also clarifies why no conversion data is available.
-    - Why fix this issue and what will be achieved with the fix? This is critical for managing user expectations. The backend is working as designed for Phase 1, but the user perceives it as a bug. A clearer UI will resolve this confusion and prevent further bug reports about this feature.
+    - Attempted fixes: The agent has installed , , and , and added backend logic to process uploaded images/PDFs. However, user feedback and test results indicate that it consistently fails to detect chords, key, or other musical information from sheet music files. The AI explanation often returns Detected chords: none.
+    - Next debug checklist:
+        1.  In , thoroughly review the  function.
+        2.  Verify that  is configured correctly and that the image preprocessing steps (if any) are effective for sheet music.
+        3.  Consider using a more specialized OMR library or API if  proves insufficient for note/chord recognition (e.g., 's built-in importers or a dedicated OMR service).
+        4.  Ensure the extracted text/data is correctly passed to the Motesart conversion logic.
+        5.  Implement more robust error handling to provide clear feedback to the user when OMR fails.
+    - Why fix this issue and what will be achieved with the fix? This is the core functionality for the sheet music upload feature. Fixing it will allow users to convert PDFs and images, which is a primary use case for the application.
     - Status: IN PROGRESS
     - Is recurring issue? Y
-    - Should Test frontend/backend/both after fix? frontend
-    - Blocked on other issue: None
+    - Should Test frontend/backend/both after fix? both
+    - Blocked on other issue: none
 
 - Issue 2:
-    - Attempted fixes: The agent implemented logic to reset the selected conversion when a new file is uploaded. However, it's not confirmed if the state is cleared when a user logs out and logs back in. The app might be showing the last viewed file from a previous session.
+    - Attempted fixes: The agent created the  component with a Canvas-based rendering function. However, this component requires detailed per-note data from the backend (pitch, position, duration) which the current OMR/conversion pipeline does not provide. The component currently uses placeholder logic.
     - Next debug checklist:
-        1. In , check the  hooks that fetch user data upon login.
-        2. Ensure that the  state is explicitly set to  or a default state when the user's session is initialized, before fetching the conversion history.
-    - Why fix this issue and what will be achieved with the fix? This improves user experience by ensuring a clean state upon login, preventing confusion about which file is being viewed.
+        1.  Modify the backend conversion logic (and the OMR pipeline) in  to extract not just chord names, but individual notes with their properties (scale degree for vertical position, duration for horizontal spacing).
+        2.  Update the  endpoint to return this detailed note data in the  field of the conversion object.
+        3.  Wire up the  component to consume this new data structure and render the notes correctly on the canvas staff.
+    - Why fix this issue and what will be achieved with the fix? This will complete the implementation of one of the two mandatory visual output formats, allowing users to see a proper sheet music conversion.
     - Status: NOT STARTED
     - Is recurring issue? N
-    - Should Test frontend/backend/both after fix? frontend
-    - Blocked on other issue: None
-
-- Issue 3:
-    - Attempted fixes: The agent fixed a  by replacing an em-dash () with a standard dash () in the PDF export template on the backend ().
-    - Next debug checklist: 
-        1. Review all strings being written to the PDF in the export function in .
-        2. Consider embedding a Unicode-compatible font (like 'DejaVu') in the  library to prevent future errors with special characters in song titles or other metadata. This would involve adding the font file and updating the  calls.
-    - Why fix this issue and what will be achieved with the fix? This will make the PDF export feature more robust and prevent crashes when song titles or other data contain non-ASCII characters.
-    - Status: IN PROGRESS
-    - Is recurring issue? Y
-    - Should Test frontend/backend/both after fix? backend
+    - Should Test frontend/backend/both after fix? both
+    - Blocked on other issue: Issue 1: OMR chord detection is not working reliably
 
 **In progress Task List**:
-- None
+- Task 1: Complete the visual preview implementation (P0)
+
+ Task Detail:
+  - Task 1:
+     - Where to resume: The  component has been added to , but it needs to be fully tested. The functionality of the toolbar (zoom, toggle views, print mode) needs to be implemented.
+     - What will be achieved with this? Users will be able to see a full visual preview of their converted music in either Staff or Lead Sheet format, and use the toolbar to interact with the view.
+     - Status: IN PROGRESS
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on something: Issue 1 and Issue 2. The preview is useless without data from the backend.
 
 **Upcoming and Future Tasks**
 Upcoming Tasks:
-- **P0: Implement Multi-User Avatar System:**
-    - Modify the user model in  to include  and a role/flag like .
-    - Create backend endpoints for users to upload a profile picture.
-    - Implement default avatar generation (e.g., initials) if no image is uploaded.
-    - Update all frontend components (Navbar, Leaderboard, etc.) to display the user-specific avatar from .
-    - Add UI logic to display a crown icon next to the user if  is true.
-- **P1: Full Verification of UI Fixes:**
-    - Perform a thorough test of the logo placement and dashboard state reset functionality.
-    - Use the testing agent to validate the entire user flow after the latest changes.
+- **P0: Implement Toolbar Functionality for Visual Preview:**
+    - In , implement the logic for the Zoom In/Out, Toggle original chords, and Print mode buttons.
+- **P1: Refine UI/UX for Failed OMR:**
+    - The user requested specific fallback text when OMR fails. Ensure this is displayed prominently in the conversion panel in .
 
 Future Tasks:
-- **Phase 2: Implement OMR for PDF/Image Conversion:**
-    - Integrate a third-party Optical Music Recognition (OMR) tool or API.
-    - Update the  endpoint in  to trigger the OMR process for PDF/image files.
-    - The OMR process should convert the visual score into a machine-readable format like MusicXML.
-    - The resulting MusicXML should then be fed into the existing Motesart conversion pipeline.
-    - Update the conversion status in the database and UI from  to .
 - **Phase 2: Airtable Integration:**
-    - Set up an Airtable base with tables for , , and .
-    - Implement a backend service to sync data from MongoDB to Airtable whenever a user registers or a new conversion is created/updated.
+    - Sync , , and  data from MongoDB to an Airtable base.
+- **Phase 2: Leaderboard Page:**
+    - Design and build a leaderboard page that displays user avatars and stats.
 
 **Completed work in this session**
-- **MVP Application Build:** Created the initial full-stack application from scratch.
-- **Dual Authentication System:** Implemented both Google OAuth and Email/Password authentication.
-- **Core Conversion Engine:** Built the backend logic to parse MIDI/MusicXML and convert them based on the Motesart methodology.
-- **Branded Outputs:** Created branded templates for on-screen display and for PDF, CSV, and Text exports.
-- **Sheet-Music First UI:** Refined the UI/UX to prioritize sheet music uploads and improve navigation with a  and a  page.
-- **Dynamic Status & Recent Files:** Implemented a user-specific Recent Files list with dynamic status indicators (, , etc.).
-- **Methodology Updates:** Updated the entire conversion logic twice to incorporate new rules for extensions, inversions, and symbols from user-provided documents.
-- **Bug Fixes:**
-    - **PDF Export:** Resolved a recurring .
-    - **UI State:** Fixed an issue where the dashboard wouldn't refresh after a new file upload.
-    - **Branding:** Added the Motesart logo to all relevant pages.
+- **Critical Bug Fixes:**
+    - Fixed the non-functional Explain AI button.
+    - Added a full-featured Chat with AI panel to the dashboard.
+    - Implemented a basic OMR pipeline to attempt conversion of PDF/image uploads, resolving the empty export bug (though accuracy is low).
+    - Added support for  file uploads with server-side conversion to PNG.
+- **Dashboard Reorganization:**
+    - Completely redesigned the File Upload dashboard () to a new two-column layout, prioritizing a large Motesart Conversion panel.
+    - Fixed layout/scrolling issues.
+- **Manual Entry Fallback:**
+    - Added a Manual Entry feature to the dashboard, allowing users to type chords and see an instant Motesart conversion, bypassing the unreliable OMR.
+- **Core Text-to-Motesart Converter:**
+    - Built and refined a new  endpoint and a corresponding  page that implements all of the user's detailed conversion rules (half-numbers, chord qualities, inversions, extensions).
+- **Multi-User Avatar System:**
+    - Implemented a full avatar system with default generated avatars (DiceBear), user uploads, and special founder account handling (unique avatar and crown icon).
+- **Visual Preview Components (Initial):**
+    - Created , , and  to display visual conversion outputs.
 
 **Earlier issues found/mentioned but not fixed**
-- No issues were missed; the main outstanding feature (OMR for PDF/image conversion) was explicitly deferred to Phase 2 by the user.
+- The core, recurring issue is the failure of the Optical Music Recognition (OMR) pipeline to reliably extract musical information from images and PDFs. The agent has made multiple attempts to fix this by installing libraries, but the problem persists and is the main blocker for the sheet music upload feature.
 
 **Known issue recurrence from previous fork**
-- None.
+- **Issue recurrence in previous fork:** PDF/Image conversion not working as expected.
+- **Recurrence count:** 3+
+- **Status:** IN PROGRESS
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, Pydantic, MongoDB (via ),  for MIDI parsing,  for MusicXML parsing,  for PDF generation,  for file uploads,  and  for password hashing, JWT for session management.
-- **Frontend:** React, React Router, Tailwind CSS, Shadcn/UI for components,  for API calls.
-- **Architecture:** Full-stack monolithic repository with a decoupled frontend and backend, communicating via a REST API.
+- **Backend:** FastAPI, Pydantic, MongoDB (), , , , , ,  for OMR.
+- **Frontend:** React, React Router, Tailwind CSS, Shadcn/UI, , HTML5 Canvas for staff notation rendering.
+- **Architecture:** Full-stack monolithic repository.
 
 **key DB schema**
-- **users** collection:  (Will need  and  added).
+- **users** collection: 
 - **conversions** collection: 
+    - **Note:** The  object will need to be extended with detailed note information (pitch, duration, position) to support the Staff Notation view.
 
 **changes in tech stack**
-- None.
+- Added , ,  to the backend for HEIC support and OMR.
 
 **All files of reference**
-- : The single source for all backend logic, including API endpoints, database interactions, authentication, and the entire music conversion process.
-- : The core of the frontend, managing file uploads, state for conversions, and displaying all results.
-- : The main router for the frontend application, defining all pages/routes.
-- : Handles both Google and email/password authentication flows.
-- : Static page that was updated multiple times to reflect the latest Motesart methodology.
-- : The main navigation component.
-- : The living document outlining the project requirements and implemented features.
+- : The main dashboard, which has been completely rewritten to support the new layout and visual previews.
+- : The monolithic backend file, containing all conversion logic, API endpoints, and the (unreliable) OMR pipeline.
+- : The new component that orchestrates the display of visual previews and the associated toolbar.
+- : The new component for rendering sheet music on an HTML Canvas. **(Requires backend data)**
+- : The new component for rendering text-based lead sheets.
+- : The page for the separate manual text-to-Motesart conversion feature.
+- : The product requirements document, which has been updated continuously.
 
 **Areas that need refactoring**:
-- The  file is becoming very large (>1400 lines). Consider splitting it into multiple files for better organization, e.g., , ,  for conversion logic, etc.
-- The  file is also large (>800 lines). Some parts, like the Motesart View and Recent Files list, could be broken out into their own components.
+-  is now extremely large and complex. It should be broken down into modules (e.g., , , ).
+-  is still very large despite the reorganization. The state logic and helper functions could be extracted into custom hooks for better readability.
 
 **key api endpoints**
--  (POST)
--  (POST)
--  (GET)
--  (GET)
--  (GET)
--  (POST)
--  (POST)
--  (GET)
--  (GET, DELETE)
--  (POST)
--  (GET, with  query param)
--  (GET)
+-  (POST) - Handles all file uploads and triggers conversion.
+-  (GET) - Fetches user's conversion history.
+-  (GET, DELETE) - Manages a single conversion.
+-  (POST) - **New:** Updates a conversion with manually entered chords.
+-  (POST) - Generates AI explanation for a progression.
+-  (POST) - Handles conversational AI interactions.
+-  (POST) - The endpoint for the manual text converter page.
 
 **Critical Info for New Agent**
-- **Phase 1 vs. Phase 2 Distinction is CRITICAL:** The application currently only *converts* MIDI and MusicXML files. PDF and Image files are *stored* but **not** converted. This is by design for Phase 1. The user has repeatedly expressed confusion on this point, believing the conversion is broken. You must manage this expectation carefully and make the UI's messaging about this distinction extremely clear.
-- **Immediate Task:** Your first task is to implement the multi-user avatar system as detailed in the user's last message.
-- **Backend Refactoring:** Be aware that  is very large. While you don't need to refactor it immediately, be careful when making changes and consider it for future improvements.
-- **Methodology Source of Truth:** All conversion logic is based on user-provided documents. Refer to the latest feedback for the correct rules on extensions and inversions.
+- **OMR is the #1 Blocker:** The user's primary frustration is the Optical Music Recognition failing on PDF/Image uploads. Your highest priority is to make this work reliably or, failing that, improve the fallbacks. The current  implementation is not sufficient.
+- **Visual Previews are Mandatory:** The application has moved beyond simple text output. All conversions must be displayed visually on-screen ( or  format) before download. Your work must happen within the new  component.
+- **Staff View Requires New Data:** To implement the Staff Notation view, you must first modify the backend to extract per-note data (pitch, duration) and return it from the API. The frontend canvas component is useless without this data.
+- **Follow the New Layout:** Adhere strictly to the new dashboard layout specified by the user. The conversion output is the main focus.
 
 **documents and test reports created in this job**
 - 
@@ -174,41 +160,38 @@ Future Tasks:
 - 
 - 
 - 
-- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-1. **User (Latest):** Requested a new multi-user avatar system with unique icons for each user and special handling for the Motesart founder account. (Status: PENDING IMPLEMENTATION)
-2. **Agent:** Acknowledged the request and stated it will implement the avatar system.
-3. **User:** Reported that conversion is not working, the state doesn't reset on new uploads/login, and the logo is missing. (Status: PARTIALLY ADDRESSED - Conversion confusion remains, state reset fixed for upload, logo added)
-4. **Agent:** Finished the multi-format and branding update, noting PDF/image uploads are stored but await Phase 2 OMR.
-5. **User:** Provided detailed requirements for handling different music styles (hymnals, chord charts), a branded output template, and a clearer status flow for conversions. (Status: IMPLEMENTED)
-6. **Agent:** Finished implementing the methodology updates and upload fixes.
-7. **User:** Provided a new methodology document and requested updates to extension/inversion logic and a fix for the PDF/image upload flow. (Status: IMPLEMENTED)
-8. **Agent:** Finished the sheet-music first UI redesign, including email auth and a Learn page.
-9. **User:** Requested a sheet-music first UI, a proper navigation bar, a Learn page, and email authentication. (Status: IMPLEMENTED)
-10. **Agent:** Finished the initial MVP build of the Motesart Converter.
+1. **User (LATEST):** Requested two specific visual output formats (Staff Notation and Lead Sheet), with detailed rendering logic, on-screen previews, and a toolbar. Stressed that the visual preview is the #1 priority. (Status: IN PROGRESS)
+2. **Agent:** Acknowledged the request and began implementation.
+3. **User:** Reported that OMR is still not working and requested a Manual Entry fallback. Also provided a complete redesign specification for the File Upload dashboard to fix layout problems and make the Motesart conversion the primary focus. (Status: COMPLETED)
+4. **Agent:** Completed the dashboard reorganization and bug fixes.
+5. **User:** Reported 4 critical bugs: Explain button not working, no chat section, empty PDF exports, and no HEIC support. (Status: COMPLETED)
+6. **Agent:** Completed the core text-to-Motesart converter engine and the new  page.
+7. **User:** Provided detailed specifications for the core Motesart conversion engine, including rules for half-numbers, chord quality, inversions, and extensions. Requested a new UI for a text-based converter. (Status: COMPLETED)
+8. **Agent:** Completed the multi-user avatar system.
+9. **User:** Requested a multi-user avatar system with unique icons and special handling for the founder account. (Status: COMPLETED)
+10. **Agent:** Acknowledged the request and asked for confirmation.
 
 **Project Health Check:**
 - **Broken:**
-  - The user perceives PDF/Image conversion as broken, though it's technically a not yet implemented feature for Phase 2. This is a critical user experience issue.
+    - The Optical Music Recognition (OMR) pipeline for PDF/Image files is functionally broken. It does not reliably detect chords or notes, which is a core feature.
 - **Mocked:**
-  - The Optical Music Recognition (OMR) pipeline is mocked. The system saves PDF/image files but does not process them, simply updating the status to Awaiting Conversion.
+    - The Staff Notation View () is mocked. The frontend component exists, but the backend does not provide the necessary per-note data (pitch, rhythm) to render anything meaningful.
 
 **3rd Party Integrations**
-- **OpenAI GPT-5.2:** Used for the Explain Panel feature. It uses the **Emergent LLM Key**.
-- **Emergent-managed Google Auth:** Used for Google sign-in. This is an internal integration.
+- **OpenAI GPT-5.2:** Used for the Explain Panel and Chat with AI features. It uses the **Emergent LLM Key**.
+- **Emergent-managed Google Auth:** Used for Google sign-in.
+- **DiceBear:** Used for generating default user avatars.
 
 **Testing status**
 - Testing agent used after significant changes: YES
 - Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: 
-- Known regressions:
-    - An  occurred during PDF export but was patched by removing the specific character. The underlying issue of handling all Unicode characters in  might persist if not addressed with a Unicode font.
+- Test files created: Yes, in  by the testing agent.
+- Known regressions: None.
 
 **Credentials to test flow:**
-- No hardcoded credentials are required. Use the Google login flow or register a new user with any email/password combination on the  page.
+- Register a new user on the  page or use the Google Auth flow. No specific credentials needed.
 
 **What agent forgot to execute**
-- The agent did not initially place the logo on all pages as implicitly expected, requiring a user reminder.
-- The agent's UI for the Phase 1 vs. Phase 2 functionality was not clear enough, leading to user confusion that the app was broken.
-- The agent did not run the testing agent after the very last set of UI bug fixes (logo and state reset).</analysis>
+- The agent has consistently failed to deliver a working OMR solution despite multiple attempts and user reports. The focus has been on adding libraries () rather than ensuring a functional end-to-end pipeline, leading to the feature remaining broken.</analysis>
