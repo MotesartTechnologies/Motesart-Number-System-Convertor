@@ -2266,47 +2266,71 @@ async def export_conversion(
         )
     
     else:
-        # Generate Text/Markdown with branded template (can use rich characters)
+        # Generate Text/Markdown with branded template that matches Lead Sheet View
+        key_name = key_sig.replace("1 = ", "") if "1 = " in key_sig else key_sig
+        
+        # Build scale reference for the key
+        note_order = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+        flat_order = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+        use_flats = key_name in ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb']
+        notes = flat_order if use_flats else note_order
+        
+        key_idx = 0
+        if key_name in note_order:
+            key_idx = note_order.index(key_name)
+        elif key_name in flat_order:
+            key_idx = flat_order.index(key_name)
+        
+        intervals = [0, 2, 4, 5, 7, 9, 11]
+        scale_ref = {}
+        for i, interval in enumerate(intervals):
+            scale_ref[i + 1] = notes[(key_idx + interval) % 12]
+        
         lines = [
-            branded_header_rich,
-            "=" * len(branded_header),
-            "",
             f"# {title}",
-            f"**Key:** {key_sig}",
-            f"**Time:** {time_sig} | **Tempo:** {tempo} BPM",
-            f"**Type:** {CONTENT_TYPES.get(content_type, content_type)}",
+            f"1 = {key_name}  |  Time: {time_sig}",
+            branded_header_rich,
             "",
-            "## Sections & Progressions"
+            "─" * 50,
+            "",
+            "## Scale Reference:",
+            "  ".join([f"{i}={scale_ref[i]}" for i in range(1, 8)]) + "  ½=chromatic",
+            "m=minor | M=non-diatonic major | ⁷=7th | °=dim | ⁺=aug | sus=suspended | /X=bass",
+            "",
         ]
         
+        # Sections with chords and lyrics
         for section in conversion.get("sections", []):
             section_name = section.get("name", "Section")
-            progression = section.get("progression", "")
-            chords = section.get("chords", [])
+            lines.append(f"[{section_name}]")
             
-            lines.append(f"\n### {section_name}")
-            if chords:
-                chord_str = " | ".join([c.get("symbol", "") for c in chords])
-                lines.append(chord_str)
-            elif progression:
-                lines.append(progression)
+            # If section has lines, display them
+            section_lines = section.get("lines", [])
+            if section_lines:
+                for line in section_lines:
+                    line_type = line.get("type", "")
+                    if line_type == "chord_line" and line.get("converted"):
+                        lines.append(line.get("converted", ""))
+                    elif line_type == "lyric_line" and line.get("original"):
+                        lines.append(line.get("original", ""))
+            else:
+                # Fallback: just show chords
+                chords = section.get("chords", [])
+                if chords:
+                    lines.append("   ".join([c.get("symbol", "") for c in chords]))
+            
+            # Progression summary
+            progression = section.get("progression", "")
+            if progression:
+                lines.append(f"Progression: {progression}")
+            
+            lines.append("")
         
-        # All chords
-        all_chords = conversion.get("chords", [])
-        if all_chords:
-            lines.extend(["", "## All Chords"])
-            chord_line = " | ".join([c.get("symbol", "") for c in all_chords])
-            lines.append(chord_line)
-        
-        # Progressions
-        progressions = conversion.get("progressions", [])
-        if progressions:
-            lines.extend(["", "## Progressions Detected"])
-            for prog in progressions:
-                lines.append(f"- {prog.get('name')}: {prog.get('description', '')}")
-        
-        # Footer legend (rich version for text)
-        lines.extend(["", "---", MOTESART_LEGEND_RICH])
+        # Footer legend
+        lines.extend([
+            "─" * 50,
+            MOTESART_LEGEND_RICH
+        ])
         
         content = "\n".join(lines)
         return StreamingResponse(
