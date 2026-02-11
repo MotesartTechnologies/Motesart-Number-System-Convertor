@@ -839,15 +839,113 @@ export default function Dashboard({ user }) {
           </Card>
         </div>
 
-        {/* Right Column - Explain & Settings */}
+        {/* Right Column - Chat, Explain & Settings */}
         <div className="lg:col-span-3 space-y-4 overflow-hidden flex flex-col">
+          {/* Chat Panel */}
+          <Card className="glass-panel border-neon-purple/20 flex-1 min-h-[300px] overflow-hidden flex flex-col">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-heading flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-neon-purple" />
+                Chat with AI
+              </CardTitle>
+              <p className="text-xs text-slate-500">Ask questions about this music</p>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-hidden flex flex-col p-0">
+              {/* Chat Messages */}
+              <div 
+                ref={chatScrollRef}
+                className="flex-1 overflow-y-auto px-4 py-2 space-y-3"
+              >
+                {chatMessages.length === 0 ? (
+                  <div className="text-center py-6">
+                    <MessageSquare className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+                    <p className="text-sm text-slate-500">
+                      {selectedConversion 
+                        ? "Ask me about the key, progressions, or how to play this piece!"
+                        : "Upload a file first to start chatting"}
+                    </p>
+                    {selectedConversion && (
+                      <div className="mt-3 flex flex-wrap gap-1 justify-center">
+                        {["What key is this in?", "Explain the progression", "How do I transpose this?"].map((q, i) => (
+                          <Button 
+                            key={i}
+                            variant="ghost" 
+                            size="sm"
+                            className="text-xs text-slate-400 hover:text-white"
+                            onClick={() => {
+                              setChatInput(q);
+                              setTimeout(() => handleSendChat(), 100);
+                            }}
+                          >
+                            {q}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  chatMessages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[85%] px-3 py-2 rounded-xl text-sm ${
+                          msg.role === "user"
+                            ? "bg-neon-purple/30 text-white rounded-br-sm"
+                            : "bg-slate-800 text-slate-200 rounded-bl-sm"
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+                {isSendingChat && (
+                  <div className="flex justify-start">
+                    <div className="bg-slate-800 text-slate-400 px-3 py-2 rounded-xl rounded-bl-sm text-sm">
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Thinking...
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Chat Input */}
+              <div className="p-3 border-t border-slate-700/50">
+                <div className="flex gap-2">
+                  <Input
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyPress={handleChatKeyPress}
+                    placeholder={selectedConversion ? "Ask about this music..." : "Upload a file first"}
+                    disabled={!selectedConversion || isSendingChat}
+                    className="flex-1 bg-slate-900/50 border-slate-700 text-sm"
+                    data-testid="chat-input"
+                  />
+                  <Button
+                    onClick={handleSendChat}
+                    disabled={!selectedConversion || !chatInput.trim() || isSendingChat}
+                    size="sm"
+                    className="bg-neon-purple hover:bg-purple-500"
+                    data-testid="chat-send-btn"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Explain Panel */}
-          <Card className="glass-panel border-neon-indigo/20 flex-1 overflow-hidden flex flex-col explain-panel">
+          <Card className="glass-panel border-neon-indigo/20 explain-panel">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-heading flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-neon-purple" />
-                  Explain
+                  <Sparkles className="w-4 h-4 text-neon-indigo" />
+                  Quick Explain
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -865,23 +963,22 @@ export default function Dashboard({ user }) {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0">
-              <ScrollArea className="h-full px-4 pb-4">
-                {explanation ? (
-                  <div className="prose prose-sm prose-invert max-w-none">
-                    <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
-                      {explanation}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Info className="w-8 h-8 text-slate-600 mx-auto mb-3" />
-                    <p className="text-sm text-slate-500">
-                      Click a progression chip or the refresh button to get an AI explanation.
-                    </p>
-                  </div>
-                )}
-              </ScrollArea>
+            <CardContent className="pt-0">
+              {explanation ? (
+                <div className="prose prose-sm prose-invert max-w-none">
+                  <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+                    {explanation}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 text-center py-2">
+                  {selectedConversion 
+                    ? selectedConversion.chords?.length || selectedConversion.sections?.length
+                      ? "Click the refresh button for an AI explanation of this piece"
+                      : "No chords detected. Try the Text Converter for manual input."
+                    : "Upload and convert a file first"}
+                </p>
+              )}
             </CardContent>
           </Card>
 
