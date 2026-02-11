@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Music,
@@ -19,11 +19,14 @@ import {
   Clock,
   Printer,
   BookOpen,
+  Send,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Navbar } from "@/components/Navbar";
 import { toast } from "sonner";
@@ -45,7 +48,7 @@ const CONTENT_TYPES = {
 const STATUS_CONFIG = {
   uploaded: {
     label: "Uploaded",
-    sublabel: "OMR coming in Phase 2",
+    sublabel: "Could not detect chords - try Text Converter",
     color: "yellow",
     icon: Clock
   },
