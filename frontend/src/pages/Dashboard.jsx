@@ -145,17 +145,18 @@ export default function Dashboard({ user }) {
   const handleUpload = async (file) => {
     if (!file) return;
 
-    const validTypes = [".mid", ".midi", ".xml", ".musicxml", ".mxl", ".pdf", ".png", ".jpg", ".jpeg"];
+    const validTypes = [".mid", ".midi", ".xml", ".musicxml", ".mxl", ".pdf", ".png", ".jpg", ".jpeg", ".heic", ".heif"];
     const extension = "." + file.name.split(".").pop().toLowerCase();
 
     if (!validTypes.includes(extension)) {
-      toast.error("Unsupported file type. Please upload sheet music (PDF, image) or MusicXML/MIDI files.");
+      toast.error("Unsupported file type. Please upload sheet music (PDF, PNG, JPG, HEIC) or MusicXML/MIDI files.");
       return;
     }
 
     setIsUploading(true);
-    // Clear the old explanation when uploading new file
+    // Clear the old explanation and chat when uploading new file
     setExplanation("");
+    setChatMessages([]);
 
     try {
       const formData = new FormData();
