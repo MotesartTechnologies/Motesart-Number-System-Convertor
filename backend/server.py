@@ -1884,6 +1884,103 @@ Keep the explanation concise (2-3 paragraphs) and educational."""
         logger.error(f"Explain error: {str(e)}")
         return {"explanation": f"Key: {conversion.get('key_signature', 'Unknown')}. Unable to generate detailed explanation at this time."}
 
+@api_router.post("/chat")
+async def chat_with_music(req: ChatRequest, user: User = Depends(get_current_user)):
+    """
+    Chat with AI about the uploaded music file.
+    Supports questions about key, progressions, transposition, and Motesart notation.
+    """
+    conversion = await db.conversions.find_one(
+        {"conversion_id": req.conversion_id, "user_id": user.user_id},
+        {"_id": 0, "file_data": 0}
+    )
+    if not conversion:
+        raise HTTPException(status_code=404, detail="Conversion not found")
+    
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="LLM API key not configured")
+        
+        # Build context about the music
+        key_sig = conversion.get("key_signature", "1 = C")
+        key_name = conversion.get("key_name") or conversion.get("raw_data", {}).get("key_name", "C")
+        chords = conversion.get("chords", [])
+        sections = conversion.get("sections", [])
+        filename = conversion.get("filename", "Unknown")
+        
+        # Build progression summary
+        progressions_text = ""
+        for section in sections[:5]:
+            if section.get("progression"):
+                progressions_text += f"- {section.get('name', 'Section')}: {section.get('progression')}\n"
+        
+        # Build chord symbols list
+        chord_symbols = [c.get("symbol", "") for c in chords[:20] if c.get("symbol")]
+        
+        system_message = f"""You are a helpful music theory expert specializing in the Motesart Number System.
+
+You are helping a user understand their uploaded music file: "{filename}"
+
+Current music context:
+- Key: {key_sig} (the note {key_name} is represented as 1)
+- Detected chords (in Motesart notation): {', '.join(chord_symbols[:15]) if chord_symbols else 'None detected'}
+- Sections and progressions:
+{progressions_text if progressions_text else 'No sections detected'}
+
+Motesart Number System rules you must use:
+- Numbers 1-7 represent scale degrees
+- Half-numbers (1½, 2½, 4½, 5½, 6½) represent chromatic tones - NEVER use 3½ or 7½
+- 'm' always marks minor chords (e.g., 2m, 6m)
+- 'M' marks non-diatonic major chords only
+- Slash notation (like 1/3) means chord/bass - the chord with a different bass note
+- Extensions use superscripts: ⁷, ⁹, ¹¹, ¹³
+
+When answering questions:
+- Always use Motesart numbers, not letter names (say "1" not "C" when in key of C)
+- Explain progressions in terms of their function (tonic, subdominant, dominant)
+- Keep responses concise but educational
+- If asked about transposition, explain how the numbers would stay the same but the key signature would change"""
+
+        # Build conversation history
+        history_text = ""
+        for msg in req.history[-10:]:  # Last 10 messages for context
+            role = "User" if msg.role == "user" else "Assistant"
+            history_text += f"{role}: {msg.content}\n"
+        
+        prompt = f"""Previous conversation:
+{history_text}
+
+User's new question: {req.message}"""
+
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"chat_{req.conversion_id}_{user.user_id}",
+            system_message=system_message
+        ).with_model("openai", "gpt-5.2")
+        
+        response = await chat.send_message(UserMessage(text=prompt))
+        
+        return {
+            "response": response,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except ImportError:
+        # Fallback response if LLM not available
+        return {
+            "response": f"I can see this file is in the key of {conversion.get('key_signature', '1 = C')}. To get detailed analysis, please ensure the AI service is configured. You can use the Text Converter for manual chord input and conversion.",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Chat error: {str(e)}")
+        return {
+            "response": f"I'm having trouble processing your request. The file appears to be in {conversion.get('key_signature', 'an unknown key')}. Please try again or use the Text Converter for manual input.",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
 # ==================== EXPORT (BRANDED MOTESART TEMPLATE) ====================
 
 # Motesart Legend for exports (ASCII-safe version for PDF)
