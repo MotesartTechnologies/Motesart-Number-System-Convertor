@@ -829,7 +829,8 @@ def convert_chord_chart_text(text: str, key_override: str = None, show_half_numb
     lines = text.strip().split('\n')
     
     # First pass: extract all chords to detect key
-    chord_pattern = re.compile(r'\b([A-G][#b]?(?:m|min|maj|M|dim|aug|sus[24]?|add|7|9|11|13|M7|maj7)*(?:/[A-G][#b]?)?)\b')
+    # Note: Don't use \b at end because #/b are not word characters
+    chord_pattern = re.compile(r'\b([A-G][#b]?(?:m|min|maj|M|dim|aug|sus[24]?|add|7|9|11|13|M7|maj7)*(?:/[A-G][#b]?)?)')
     all_chords_raw = chord_pattern.findall(text)
     
     # Detect or use override key
