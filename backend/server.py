@@ -2113,11 +2113,27 @@ async def export_conversion(
         # Generate branded PDF (using ASCII-safe characters)
         from fpdf import FPDF
         
-        # Helper to make strings PDF-safe
+        # Helper to make strings PDF-safe (ASCII-only for fpdf compatibility)
         def pdf_safe(s):
             if not s:
                 return ""
-            return s.replace("—", "-").replace("½", "1/2").replace("⁺", "+").replace("°", "o").replace("²", "2").replace("⁴", "4").replace("⁹", "9").replace("¹¹", "11").replace("¹³", "13")
+            # Replace Unicode characters with ASCII equivalents
+            replacements = {
+                "—": "-", "–": "-",
+                "½": "1/2",
+                "⁺": "+",
+                "°": "o",
+                "²": "2", "⁴": "4", "⁷": "7", "⁹": "9",
+                "¹¹": "11", "¹³": "13",
+                "♭": "b", "♯": "#", "♮": "",
+                "♩": "", "♪": "", "♫": "", "♬": "",
+                "\u266d": "b",  # flat symbol
+                "\u266f": "#",  # sharp symbol
+            }
+            for old, new in replacements.items():
+                s = s.replace(old, new)
+            # Remove any remaining non-ASCII characters
+            return s.encode('ascii', 'ignore').decode('ascii')
         
         pdf = FPDF()
         pdf.add_page()
