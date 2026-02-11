@@ -254,6 +254,7 @@ export default function Dashboard({ user }) {
       if (response.ok) {
         const result = await response.json();
         setManualConversionResult(result);
+        setLivePreviewResult(result);
         toast.success(`Converted ${result.chord_count} chords!`);
         
         // If we have a selected conversion, update it with the manual result
@@ -269,6 +270,58 @@ export default function Dashboard({ user }) {
       setIsConvertingManual(false);
     }
   };
+
+  // Live preview - debounced conversion as user types
+  const fetchLivePreview = useCallback(async (text, key) => {
+    if (!text.trim()) {
+      setLivePreviewResult(null);
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/convert/text`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: text,
+          key: key,
+          time_signature: "4/4",
+          show_half_numbers: true,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setLivePreviewResult(result);
+      }
+    } catch (error) {
+      console.error("Live preview error:", error);
+    }
+  }, []);
+
+  // Debounced live preview effect
+  useEffect(() => {
+    if (showManualEntry && manualChords.trim()) {
+      // Clear previous timeout
+      if (livePreviewTimeoutRef.current) {
+        clearTimeout(livePreviewTimeoutRef.current);
+      }
+      
+      // Set new timeout for 500ms delay
+      livePreviewTimeoutRef.current = setTimeout(() => {
+        fetchLivePreview(manualChords, manualKey);
+      }, 500);
+    } else if (!manualChords.trim()) {
+      setLivePreviewResult(null);
+    }
+    
+    return () => {
+      if (livePreviewTimeoutRef.current) {
+        clearTimeout(livePreviewTimeoutRef.current);
+      }
+    };
+  }, [manualChords, manualKey, showManualEntry, fetchLivePreview]);
 
   // Update conversion in database with manual entry data
   const updateConversionWithManualData = async (result) => {
