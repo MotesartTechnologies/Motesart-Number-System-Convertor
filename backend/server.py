@@ -569,14 +569,25 @@ def is_diatonic_chord(root_semitones: int, quality: str, key_root: int) -> bool:
 def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
     """
     Parse a chord symbol (like "Am7", "G/B", "Cmaj7") into Motesart notation.
-    Uses BASS FIRST, CHORD SECOND for slash chords per methodology.
+    
+    Rule §6: Chord Quality Inference
+    - Minor chords: ALWAYS mark with 'm' (e.g., Em → 6m)
+    - Major chords: Add 'M' ONLY if non-diatonic
+    - Diatonic major chords: no modifier
+    
+    Rule §7: Inversions - chord/bass format (NOT bass/chord)
+    - G/B in key of G → 1/3 (1-chord with 3 in bass)
+    
+    Rule §4c: Extensions with superscripts
+    - 7→⁷, 9→⁹, 11→¹¹, 13→¹³
     """
     if not chord_str or chord_str.strip() == '':
         return None
     
     chord_str = chord_str.strip()
+    original_chord = chord_str
     
-    # Handle slash chords (bass/chord or chord/bass in input)
+    # Handle slash chords - Rule §7: chord/bass format
     bass_note = None
     if '/' in chord_str:
         parts = chord_str.split('/')
@@ -591,61 +602,143 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
     root_name = root_match.group(1)
     root_semitone = CHORD_ROOT_MAP.get(root_name, 0)
     quality_str = chord_str[len(root_name):]
+    original_quality = quality_str
     
-    # Convert root to Motesart number
-    root_number = get_note_number(root_semitone + 60, key_root)
+    # Determine the actual chord quality from input
+    is_minor = False
+    is_diminished = False
+    is_augmented = False
+    is_sus2 = False
+    is_sus4 = False
+    has_7 = False
+    has_maj7 = False
+    has_9 = False
+    has_11 = False
+    has_13 = False
     
-    # Determine chord quality
-    quality = ""
-    extensions = []
-    
-    # Check for minor
+    # Check for minor first (before other processing)
     if quality_str.startswith('m') and not quality_str.startswith('maj'):
-        quality = "m"
+        is_minor = True
         quality_str = quality_str[1:]
     elif quality_str.startswith('min'):
-        quality = "m"
+        is_minor = True
         quality_str = quality_str[3:]
+    elif quality_str.startswith('-'):
+        is_minor = True
+        quality_str = quality_str[1:]
     
     # Check for diminished
-    if 'dim' in quality_str or '°' in quality_str or 'o' in quality_str.lower():
-        quality = "°"
+    if 'dim' in quality_str.lower() or '°' in quality_str or quality_str.lower() == 'o':
+        is_diminished = True
         quality_str = re.sub(r'dim|°|o', '', quality_str, flags=re.IGNORECASE)
     
     # Check for augmented
-    if 'aug' in quality_str or '+' in quality_str:
-        quality = "⁺"
-        quality_str = re.sub(r'aug|\+', '', quality_str, flags=re.IGNORECASE)
+    if 'aug' in quality_str.lower() or '+' in quality_str or '⁺' in quality_str:
+        is_augmented = True
+        quality_str = re.sub(r'aug|\+|⁺', '', quality_str, flags=re.IGNORECASE)
     
     # Check for suspended
-    if 'sus2' in quality_str:
-        quality = "sus²"
-        quality_str = quality_str.replace('sus2', '')
-    elif 'sus4' in quality_str or 'sus' in quality_str:
-        quality = "sus⁴"
-        quality_str = re.sub(r'sus4?', '', quality_str)
+    if 'sus2' in quality_str.lower():
+        is_sus2 = True
+        quality_str = re.sub(r'sus2', '', quality_str, flags=re.IGNORECASE)
+    elif 'sus4' in quality_str.lower() or 'sus' in quality_str.lower():
+        is_sus4 = True
+        quality_str = re.sub(r'sus4?', '', quality_str, flags=re.IGNORECASE)
     
-    # Check for 7th
-    if 'maj7' in quality_str.lower() or 'M7' in quality_str or 'Δ7' in quality_str:
-        quality += "M⁷"
-        quality_str = re.sub(r'maj7|M7|Δ7', '', quality_str, flags=re.IGNORECASE)
-    elif '7' in quality_str and 'm' in quality:
-        quality = "m⁷"
-        quality_str = quality_str.replace('7', '')
+    # Check for 7th variations - order matters!
+    if 'maj7' in quality_str.lower() or 'M7' in quality_str or 'Δ7' in quality_str or 'Δ' in quality_str:
+        has_maj7 = True
+        quality_str = re.sub(r'maj7|M7|Δ7|Δ', '', quality_str, flags=re.IGNORECASE)
     elif '7' in quality_str:
-        quality += "⁷"
+        has_7 = True
         quality_str = quality_str.replace('7', '')
     
-    # Check for extensions (2⁹, 4¹¹, 6¹³)
-    if '9' in quality_str:
-        extensions.append("⁹")
-        quality_str = quality_str.replace('9', '')
-    if '11' in quality_str:
-        extensions.append("¹¹")
-        quality_str = quality_str.replace('11', '')
+    # Check for extensions
     if '13' in quality_str:
-        extensions.append("¹³")
+        has_13 = True
         quality_str = quality_str.replace('13', '')
+    if '11' in quality_str:
+        has_11 = True
+        quality_str = quality_str.replace('11', '')
+    if '9' in quality_str:
+        has_9 = True
+        quality_str = quality_str.replace('9', '')
+    
+    # Convert root to Motesart number
+    root_degree, root_chromatic, root_number = semitone_to_degree(root_semitone - key_root)
+    
+    # Determine the quality string for Motesart notation
+    # Rule §6: Quality Inference
+    quality_symbol = ""
+    
+    if is_diminished:
+        quality_symbol = "°"
+    elif is_augmented:
+        quality_symbol = "⁺"
+    elif is_sus2:
+        quality_symbol = "sus²"
+    elif is_sus4:
+        quality_symbol = "sus⁴"
+    elif is_minor:
+        # Rule §6: Minor chords ALWAYS marked with 'm'
+        quality_symbol = "m"
+    else:
+        # Major chord - check if diatonic
+        actual_quality = 'minor' if is_minor else 'major'
+        if not is_diatonic_chord(root_semitone, actual_quality, key_root):
+            # Rule §6: Non-diatonic major gets 'M'
+            quality_symbol = "M"
+        # Diatonic major: no modifier
+    
+    # Build extension string with superscripts (Rule §4c)
+    extension_str = ""
+    if has_maj7:
+        if is_minor:
+            extension_str = "M⁷"  # mM7 chord
+        else:
+            extension_str = "M⁷"
+    elif has_7:
+        if is_minor:
+            quality_symbol = "m"  # Already set, but be explicit
+            extension_str = "⁷"
+        elif is_diminished:
+            extension_str = "⁷"  # dim7
+        else:
+            extension_str = "⁷"  # dominant 7
+    
+    if has_9:
+        extension_str += "⁹"
+    if has_11:
+        extension_str += "¹¹"
+    if has_13:
+        extension_str += "¹³"
+    
+    # Build the final symbol
+    symbol = root_number + quality_symbol + extension_str
+    
+    # Handle slash bass note - Rule §7: chord/bass format
+    bass_number = None
+    if bass_note:
+        bass_match = re.match(r'^([A-G][#b]?)', bass_note)
+        if bass_match:
+            bass_root = bass_match.group(1)
+            bass_semitone = CHORD_ROOT_MAP.get(bass_root, 0)
+            _, _, bass_number = semitone_to_degree(bass_semitone - key_root)
+            # Rule §7: Format as chord/bass (e.g., 1/3 means 1-chord with 3 in bass)
+            symbol = f"{symbol}/{bass_number}"
+    
+    return {
+        "original": original_chord,
+        "symbol": symbol,
+        "root": root_number,
+        "quality": quality_symbol,
+        "bass": bass_number,
+        "extensions": extension_str,
+        "is_minor": is_minor,
+        "is_diminished": is_diminished,
+        "is_augmented": is_augmented,
+        "is_diatonic": is_diatonic_chord(root_semitone, 'minor' if is_minor else 'major', key_root)
+    }
     
     # Build Motesart symbol
     symbol = root_number + quality
