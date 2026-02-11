@@ -477,6 +477,9 @@ MAJOR_SCALE_SEMITONES = [0, 2, 4, 5, 7, 9, 11]  # 1, 2, 3, 4, 5, 6, 7
 NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 FLAT_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
 
+# All key names for auto-detect and selection
+ALL_KEYS = ['C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B']
+
 # Chord symbol to root mapping (for chord chart parsing)
 CHORD_ROOT_MAP = {
     'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'Fb': 4,
@@ -484,38 +487,84 @@ CHORD_ROOT_MAP = {
     'Bb': 10, 'B': 11, 'Cb': 11
 }
 
-# Chord quality patterns
-CHORD_QUALITY_MAP = {
-    'm': 'minor', 'min': 'minor', '-': 'minor',
-    'M': 'major', 'maj': 'major', 'Δ': 'major',
-    'dim': 'dim', 'o': 'dim', '°': 'dim',
-    'aug': 'aug', '+': 'aug', '⁺': 'aug',
-    'sus2': 'sus²', 'sus4': 'sus⁴',
-    '7': '⁷', 'maj7': 'M⁷', 'M7': 'M⁷', 'Δ7': 'M⁷',
-    'm7': 'm⁷', 'min7': 'm⁷', '-7': 'm⁷',
-    '9': '⁹', '11': '¹¹', '13': '¹³',
-    'add9': 'add⁹', 'add11': 'add¹¹',
+# Diatonic chord qualities in major key (by scale degree)
+# 1=major, 2=minor, 3=minor, 4=major, 5=major, 6=minor, 7=diminished
+DIATONIC_QUALITIES = {
+    1: 'major', 2: 'minor', 3: 'minor', 4: 'major', 
+    5: 'major', 6: 'minor', 7: 'diminished'
+}
+
+# Rule §3: Half-numbers - ONLY these are valid (no 3½ or 7½)
+# Semitone offsets 1,3,6,8,10 map to degrees 1,2,4,5,6 with ½ symbol
+HALF_NUMBER_MAP = {
+    1: "1½",   # Between 1 and 2 (C# in key of C)
+    3: "2½",   # Between 2 and 3 (D# in key of C)
+    6: "4½",   # Between 4 and 5 (F# in key of C)
+    8: "5½",   # Between 5 and 6 (G# in key of C)
+    10: "6½",  # Between 6 and 7 (A# in key of C)
 }
 
 def get_note_number(pitch: int, key_root: int) -> str:
-    """Convert MIDI pitch to Motesart number relative to key"""
+    """
+    Convert MIDI pitch to Motesart number relative to key.
+    Rule §3: Only valid half-numbers are 1½, 2½, 4½, 5½, 6½ (never 3½ or 7½)
+    """
     semitones_from_root = (pitch - key_root) % 12
     
     # Check if it's a scale degree
     if semitones_from_root in MAJOR_SCALE_SEMITONES:
         return str(MAJOR_SCALE_SEMITONES.index(semitones_from_root) + 1)
     
-    # Half-numbers for chromatic tones
-    # No 3½ (between 3-4 is natural half step) or 7½ (between 7-1 is natural half step)
-    half_number_map = {
-        1: "1½",   # Between 1 and 2
-        3: "2½",   # Between 2 and 3
-        6: "4½",   # Between 4 and 5
-        8: "5½",   # Between 5 and 6
-        10: "6½",  # Between 6 and 7
-    }
+    # Half-numbers for chromatic tones (Rule §3)
+    return HALF_NUMBER_MAP.get(semitones_from_root, f"?{semitones_from_root}")
+
+def semitone_to_degree(semitones: int) -> tuple:
+    """
+    Convert semitones from root to scale degree and whether it's chromatic.
+    Returns (degree_number, is_chromatic, half_number_symbol)
+    """
+    semitones = semitones % 12
     
-    return half_number_map.get(semitones_from_root, f"?{semitones_from_root}")
+    # Check if it's a diatonic scale degree
+    if semitones in MAJOR_SCALE_SEMITONES:
+        degree = MAJOR_SCALE_SEMITONES.index(semitones) + 1
+        return (degree, False, str(degree))
+    
+    # Chromatic - use half-numbers
+    half_symbol = HALF_NUMBER_MAP.get(semitones)
+    if half_symbol:
+        base_degree = int(half_symbol[0])
+        return (base_degree, True, half_symbol)
+    
+    # Fallback for edge cases
+    return (0, True, f"?{semitones}")
+
+def is_diatonic_chord(root_semitones: int, quality: str, key_root: int) -> bool:
+    """
+    Rule §6: Check if a chord is diatonic to the key.
+    Used to determine if we need 'M' marker for major chords.
+    """
+    semitones_from_key = (root_semitones - key_root) % 12
+    
+    # Get the scale degree
+    if semitones_from_key not in MAJOR_SCALE_SEMITONES:
+        return False  # Root is chromatic, so chord is non-diatonic
+    
+    degree = MAJOR_SCALE_SEMITONES.index(semitones_from_key) + 1
+    expected_quality = DIATONIC_QUALITIES.get(degree)
+    
+    # Normalize quality for comparison
+    quality_lower = quality.lower()
+    if quality_lower in ['m', 'min', 'minor', '-']:
+        actual = 'minor'
+    elif quality_lower in ['dim', 'o', '°', 'diminished']:
+        actual = 'diminished'
+    elif quality_lower in ['aug', '+', '⁺', 'augmented']:
+        actual = 'augmented'
+    else:
+        actual = 'major'
+    
+    return actual == expected_quality
 
 def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
     """
