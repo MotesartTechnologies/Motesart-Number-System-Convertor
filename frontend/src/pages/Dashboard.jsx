@@ -814,7 +814,7 @@ export default function Dashboard({ user }) {
                   </Button>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Type chord symbols (G, Am, D7, C/E) and select the key to convert
+                  Type chord symbols and see live Motesart conversion below
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -834,28 +834,85 @@ export default function Dashboard({ user }) {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="flex-1">
+                    <Label className="text-xs text-slate-400 mb-1 block">Time</Label>
+                    <Select defaultValue="4/4">
+                      <SelectTrigger className="bg-slate-900/50 border-slate-700">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4/4">4/4</SelectItem>
+                        <SelectItem value="3/4">3/4</SelectItem>
+                        <SelectItem value="6/8">6/8</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
-                  <Label className="text-xs text-slate-400 mb-1 block">Chord Symbols</Label>
+                  <Label className="text-xs text-slate-400 mb-1 block">Chord Chart</Label>
                   <Textarea
                     value={manualChords}
                     onChange={(e) => setManualChords(e.target.value)}
-                    placeholder={`Enter chords with optional section labels:
+                    placeholder={`Enter chords with section labels and lyrics:
 
 [Verse]
-G  D  Em  C
-Amazing grace how sweet
+Db   Fm   Db   Ab
+You saw me, You loved me
 
 [Chorus]
-C  G  Am  F
-The sound that saved`}
-                    className="bg-slate-900/50 border-slate-700 font-mono min-h-[120px]"
+Ab   Db   Eb   Fm
+Lord You reign forever`}
+                    className="bg-slate-900/50 border-slate-700 font-mono min-h-[140px]"
+                    data-testid="manual-chord-input"
                   />
                 </div>
+                
+                {/* Live Preview Section */}
+                {livePreviewResult && livePreviewResult.sections?.length > 0 && (
+                  <div className="border border-slate-700/50 rounded-lg bg-slate-900/30 p-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Eye className="w-4 h-4 text-neon-indigo" />
+                      <span className="text-xs font-medium text-slate-400">Live Preview</span>
+                      <span className="text-xs text-amber-400 font-mono ml-auto">
+                        1 = {livePreviewResult.key_name || manualKey}
+                      </span>
+                    </div>
+                    <div className="space-y-3 max-h-[200px] overflow-y-auto">
+                      {livePreviewResult.sections.map((section, sIdx) => (
+                        <div key={sIdx}>
+                          <div className="text-sm font-bold text-purple-400 mb-1">
+                            [{section.name}]
+                          </div>
+                          {section.lines?.map((line, lIdx) => (
+                            <div key={lIdx} className="mb-1">
+                              {line.type === 'chord_line' && line.converted && (
+                                <div className="text-amber-400 font-mono text-lg font-bold tracking-wider">
+                                  {line.converted}
+                                </div>
+                              )}
+                              {line.type === 'lyric_line' && line.original && (
+                                <div className="text-slate-400 text-sm">
+                                  {line.original}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          {!section.lines?.length && section.chords?.length > 0 && (
+                            <div className="text-amber-400 font-mono text-lg font-bold tracking-wider">
+                              {section.chords.map(c => c.symbol).join('   ')}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <Button 
                   onClick={handleManualConvert}
                   disabled={isConvertingManual || !manualChords.trim()}
                   className="w-full bg-neon-indigo hover:bg-indigo-500"
+                  data-testid="convert-btn"
                 >
                   {isConvertingManual ? (
                     <>
@@ -865,7 +922,7 @@ The sound that saved`}
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 mr-2" />
-                      Convert to Motesart Numbers
+                      Apply to Preview
                     </>
                   )}
                 </Button>
