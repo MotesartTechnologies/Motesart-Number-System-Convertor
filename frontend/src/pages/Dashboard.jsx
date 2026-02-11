@@ -820,13 +820,13 @@ export default function Dashboard({ user }) {
 
         {/* RIGHT COLUMN - Motesart Conversion (60% on desktop) */}
         <div className="lg:w-[65%] space-y-4 overflow-y-auto max-h-[calc(100vh-5rem)] pb-10">
-          {/* MAIN: Motesart Conversion Panel */}
-          <Card className="bg-[#12122a] border-[#2a2a4a] rounded-xl">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+          {/* MAIN: Motesart Visual Preview Panel */}
+          <Card className="bg-[#12122a] border-[#2a2a4a] rounded-xl overflow-hidden">
+            <CardHeader className="pb-0 border-b border-slate-700/50">
+              <div className="flex items-center justify-between pb-3">
                 <CardTitle className="text-lg font-heading flex items-center gap-2">
                   <Music className="w-5 h-5 text-amber-400" />
-                  Motesart Conversion
+                  Motesart Conversion Preview
                 </CardTitle>
                 {selectedConversion && (
                   <div className="flex items-center gap-2">
@@ -834,7 +834,7 @@ export default function Dashboard({ user }) {
                       variant="outline" 
                       size="sm"
                       onClick={() => setShowManualEntry(!showManualEntry)}
-                      className="text-xs"
+                      className="text-xs border-slate-700"
                     >
                       <Edit3 className="w-3 h-3 mr-1" />
                       Manual Entry
@@ -844,8 +844,63 @@ export default function Dashboard({ user }) {
                 )}
               </div>
             </CardHeader>
-            <CardContent className="min-h-[300px]">
-              {renderMotesartContent()}
+            <CardContent className="p-0 min-h-[450px]">
+              {!selectedConversion ? (
+                <div className="flex flex-col items-center justify-center h-[450px] text-center">
+                  <FileMusic className="w-16 h-16 text-slate-700 mb-4" />
+                  <p className="text-slate-400 text-lg">Upload sheet music to see Motesart numbers</p>
+                  <p className="text-sm text-slate-600 mt-2">
+                    Supports: PDF, PNG, JPG, HEIC, MusicXML, MIDI
+                  </p>
+                </div>
+              ) : selectedConversion.status === "processing" || selectedConversion.status === "converting_ocr" ? (
+                <div className="flex flex-col items-center justify-center h-[450px]">
+                  <Loader2 className="w-12 h-12 text-neon-indigo animate-spin mb-4" />
+                  <p className="text-slate-400">{STATUS_CONFIG[selectedConversion.status]?.sublabel}</p>
+                </div>
+              ) : (manualConversionResult?.sections?.length > 0 || 
+                   manualConversionResult?.all_chords?.length > 0 ||
+                   selectedConversion?.sections?.length > 0 || 
+                   selectedConversion?.chords?.length > 0) ? (
+                <MotesartPreview
+                  songData={{
+                    title: selectedConversion?.title || selectedConversion?.filename?.split('.')[0] || 'Untitled',
+                    artist: selectedConversion?.artist,
+                    sections: manualConversionResult?.sections || selectedConversion?.sections || [],
+                    all_chords: manualConversionResult?.all_chords || selectedConversion?.chords || [],
+                    measures: [],
+                  }}
+                  conversionId={selectedConversion?.conversion_id}
+                  keySignature={
+                    (manualConversionResult?.key_name) || 
+                    (selectedConversion?.key_name) ||
+                    (selectedConversion?.key_signature?.replace('1 = ', '')) || 
+                    'C'
+                  }
+                  timeSignature={selectedConversion?.time_signature || "4/4"}
+                  isStaffNotation={selectedConversion?.is_sheet_music && selectedConversion?.file_type === 'pdf'}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[450px] text-center px-6">
+                  <AlertCircle className="w-12 h-12 text-yellow-500/50 mb-4" />
+                  <p className="text-slate-300 font-medium mb-2">No Chords Detected</p>
+                  <p className="text-sm text-slate-500 max-w-md mb-4">
+                    Could not automatically detect chords from this file. You can:
+                  </p>
+                  <div className="text-left text-sm text-slate-400 space-y-2 mb-6">
+                    <p>1. Try uploading a higher resolution image</p>
+                    <p>2. Use Manual Entry to type chord symbols (G, Am, D7)</p>
+                    <p>3. Use the Text Converter tab for full chord charts</p>
+                  </div>
+                  <Button 
+                    onClick={() => setShowManualEntry(true)}
+                    className="bg-neon-indigo hover:bg-indigo-500"
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Open Manual Entry
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -894,8 +949,16 @@ export default function Dashboard({ user }) {
                   <Textarea
                     value={manualChords}
                     onChange={(e) => setManualChords(e.target.value)}
-                    placeholder="Enter chords like: G  D  Em  C  or  [Verse] G D C G  [Chorus] C G Am F"
-                    className="bg-slate-900/50 border-slate-700 font-mono min-h-[100px]"
+                    placeholder={`Enter chords with optional section labels:
+
+[Verse]
+G  D  Em  C
+Amazing grace how sweet
+
+[Chorus]
+C  G  Am  F
+The sound that saved`}
+                    className="bg-slate-900/50 border-slate-700 font-mono min-h-[120px]"
                   />
                 </div>
                 <Button 
