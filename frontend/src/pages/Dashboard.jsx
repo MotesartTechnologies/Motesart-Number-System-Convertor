@@ -243,7 +243,16 @@ export default function Dashboard({ user }) {
 
   // Get explanation
   const handleExplain = async (sectionIndex = null) => {
-    if (!selectedConversion) return;
+    if (!selectedConversion) {
+      toast.error("Upload and convert a file first to get an AI explanation");
+      return;
+    }
+    
+    // Check if there are any chords to explain
+    if (!selectedConversion.chords?.length && !selectedConversion.sections?.length) {
+      toast.error("No chords detected in this file. Try the Text Converter for manual input.");
+      return;
+    }
 
     setIsExplaining(true);
     try {
@@ -260,11 +269,74 @@ export default function Dashboard({ user }) {
       if (response.ok) {
         const data = await response.json();
         setExplanation(data.explanation);
+        toast.success("Explanation generated!");
+      } else {
+        throw new Error("Failed to generate explanation");
       }
     } catch (error) {
       toast.error("Failed to generate explanation");
+      setExplanation("Unable to generate explanation. Please try again.");
     } finally {
       setIsExplaining(false);
+    }
+  };
+
+  // Handle chat message
+  const handleSendChat = async () => {
+    if (!chatInput.trim() || !selectedConversion) return;
+    
+    const userMessage = chatInput.trim();
+    setChatInput("");
+    
+    // Add user message to chat
+    const newUserMsg = {
+      role: "user",
+      content: userMessage,
+      timestamp: new Date().toISOString()
+    };
+    setChatMessages(prev => [...prev, newUserMsg]);
+    
+    setIsSendingChat(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/chat`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversion_id: selectedConversion.conversion_id,
+          message: userMessage,
+          history: chatMessages.slice(-10) // Send last 10 messages for context
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const assistantMsg = {
+          role: "assistant",
+          content: data.response,
+          timestamp: data.timestamp || new Date().toISOString()
+        };
+        setChatMessages(prev => [...prev, assistantMsg]);
+      } else {
+        throw new Error("Failed to get response");
+      }
+    } catch (error) {
+      const errorMsg = {
+        role: "assistant",
+        content: "I'm having trouble responding right now. Please try again.",
+        timestamp: new Date().toISOString()
+      };
+      setChatMessages(prev => [...prev, errorMsg]);
+    } finally {
+      setIsSendingChat(false);
+    }
+  };
+
+  // Handle chat input key press
+  const handleChatKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendChat();
     }
   };
 
