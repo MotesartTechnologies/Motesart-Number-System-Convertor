@@ -18,7 +18,8 @@ const MOTESART_LOGO = "https://customer-assets.emergentagent.com/job_music-to-nu
 
 const NAV_ITEMS = [
   { name: "Home", path: "/" },
-  { name: "Converter", path: "/converter" },
+  { name: "Text Converter", path: "/converter" },
+  { name: "File Upload", path: "/dashboard" },
   { name: "Learn", path: "/learn" },
 ];
 
