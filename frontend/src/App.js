@@ -131,13 +131,22 @@ const AppRouter = () => {
         path="/converter"
         element={
           <ProtectedRoute>
+            {({ user }) => <ConverterPage user={user} />}
+          </ProtectedRoute>
+        }
+      />
+      {/* Dashboard for file uploads (MIDI, MusicXML, etc.) */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
             {({ user }) => <Dashboard user={user} />}
           </ProtectedRoute>
         }
       />
-      {/* Keep /dashboard as alias for /converter */}
+      {/* Upload route also goes to dashboard */}
       <Route
-        path="/dashboard"
+        path="/upload"
         element={
           <ProtectedRoute>
             {({ user }) => <Dashboard user={user} />}
