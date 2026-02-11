@@ -739,29 +739,232 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
         "is_augmented": is_augmented,
         "is_diatonic": is_diatonic_chord(root_semitone, 'minor' if is_minor else 'major', key_root)
     }
+
+def auto_detect_key(chords: List[str]) -> tuple:
+    """
+    Auto-detect the key from a list of chord symbols.
+    Returns (key_root, key_name)
+    """
+    if not chords:
+        return (0, "C")
     
-    # Build Motesart symbol
-    symbol = root_number + quality
-    if extensions:
-        symbol += "".join(extensions)
+    # Count chord roots
+    root_counts = {}
+    minor_counts = {}
     
-    # Handle slash bass (BASS FIRST, CHORD SECOND per methodology)
-    bass_number = None
-    if bass_note:
-        bass_root = re.match(r'^([A-G][#b]?)', bass_note)
-        if bass_root:
-            bass_semitone = CHORD_ROOT_MAP.get(bass_root.group(1), 0)
-            bass_number = get_note_number(bass_semitone + 60, key_root)
-            # Format: bass/chord (e.g., 1/5 = 1 in bass, 5-chord above)
-            symbol = f"{bass_number}/{root_number}{quality}"
+    for chord in chords:
+        root_match = re.match(r'^([A-G][#b]?)', chord)
+        if root_match:
+            root = root_match.group(1)
+            root_counts[root] = root_counts.get(root, 0) + 1
+            
+            # Check if minor
+            rest = chord[len(root):]
+            if rest.startswith('m') and not rest.startswith('maj'):
+                minor_counts[root] = minor_counts.get(root, 0) + 1
+    
+    if not root_counts:
+        return (0, "C")
+    
+    # Most common root is likely the key (especially if major)
+    # Give preference to major chords that appear frequently
+    best_key = None
+    best_score = -1
+    
+    for root, count in root_counts.items():
+        # Major chords get higher weight for key detection
+        minor_count = minor_counts.get(root, 0)
+        major_count = count - minor_count
+        score = major_count * 2 + minor_count
+        
+        if score > best_score:
+            best_score = score
+            best_key = root
+    
+    if best_key:
+        key_root = CHORD_ROOT_MAP.get(best_key, 0)
+        return (key_root, best_key)
+    
+    return (0, "C")
+
+def convert_chord_chart_text(text: str, key_override: str = None, show_half_numbers: bool = True) -> Dict:
+    """
+    Convert a chord chart text to Motesart notation.
+    
+    Supports three input formats:
+    1. Chords-over-lyrics (Ultimate Guitar style)
+    2. Inline chords [G] within lyrics
+    3. Plain chord sequences (G Am C D)
+    
+    Returns structured data with sections, converted chords, and metadata.
+    """
+    if not text or not text.strip():
+        return {"error": "No input text provided", "sections": [], "chords": []}
+    
+    lines = text.strip().split('\n')
+    
+    # First pass: extract all chords to detect key
+    chord_pattern = re.compile(r'\b([A-G][#b]?(?:m|min|maj|M|dim|aug|sus[24]?|add|7|9|11|13|M7|maj7)*(?:/[A-G][#b]?)?)\b')
+    all_chords_raw = chord_pattern.findall(text)
+    
+    # Detect or use override key
+    if key_override and key_override in CHORD_ROOT_MAP:
+        key_root = CHORD_ROOT_MAP[key_override]
+        key_name = key_override
+    else:
+        key_root, key_name = auto_detect_key(all_chords_raw)
+    
+    # Section headers pattern
+    section_pattern = re.compile(
+        r'^\s*\[?\s*(Intro|Verse|Pre[\-\s]?Chorus|Chorus|Bridge|Interlude|Refrain|Outro|Tag|Vamp|Hook|Instrumental|Solo|Ending|Coda)\s*\d*\s*\]?\s*:?\s*$',
+        re.IGNORECASE
+    )
+    
+    sections = []
+    current_section = {"name": "Intro", "lines": [], "chords": []}
+    all_converted_chords = []
+    chord_count = 0
+    
+    for line in lines:
+        original_line = line
+        line_stripped = line.strip()
+        
+        if not line_stripped:
+            continue
+        
+        # Check for section header
+        section_match = section_pattern.match(line_stripped)
+        if section_match:
+            # Save previous section if it has content
+            if current_section["chords"] or current_section["lines"]:
+                sections.append(current_section)
+            
+            current_section = {
+                "name": section_match.group(1).strip().title(),
+                "lines": [],
+                "chords": []
+            }
+            continue
+        
+        # Check for key/tempo/time metadata
+        key_match = re.match(r'^Key:\s*([A-G][#b]?)', line_stripped, re.IGNORECASE)
+        if key_match and not key_override:
+            key_name = key_match.group(1)
+            key_root = CHORD_ROOT_MAP.get(key_name, 0)
+            continue
+        
+        if re.match(r'^(Tempo|Time|BPM):', line_stripped, re.IGNORECASE):
+            continue
+        
+        # Process chords in the line
+        line_chords = []
+        converted_line = line_stripped
+        
+        # Find all chord positions and convert them
+        for match in chord_pattern.finditer(line_stripped):
+            chord_str = match.group(1)
+            parsed = parse_chord_symbol(chord_str, key_root)
+            if parsed:
+                line_chords.append(parsed)
+                all_converted_chords.append(parsed)
+                chord_count += 1
+        
+        # Build the converted line with Motesart symbols
+        if line_chords:
+            # Replace chords with their Motesart equivalents
+            result_line = line_stripped
+            for parsed in reversed(line_chords):  # Reverse to preserve positions
+                original = parsed["original"]
+                symbol = parsed["symbol"]
+                result_line = result_line.replace(original, symbol, 1)
+            
+            current_section["lines"].append({
+                "original": line_stripped,
+                "converted": result_line,
+                "chords": line_chords,
+                "type": "chord_line"
+            })
+            current_section["chords"].extend(line_chords)
+        else:
+            # Line without chords (lyrics or other text)
+            current_section["lines"].append({
+                "original": line_stripped,
+                "converted": line_stripped,
+                "chords": [],
+                "type": "lyric_line" if len(line_stripped) > 3 else "empty"
+            })
+    
+    # Add the last section
+    if current_section["chords"] or current_section["lines"]:
+        sections.append(current_section)
+    
+    # Build progressions for each section
+    for section in sections:
+        if section["chords"]:
+            # Get unique chord symbols in order (up to 8)
+            seen = []
+            for c in section["chords"]:
+                if c["symbol"] not in seen:
+                    seen.append(c["symbol"])
+            section["progression"] = " - ".join(seen[:8])
+        else:
+            section["progression"] = ""
     
     return {
-        "original": chord_str,
-        "symbol": symbol,
-        "root": root_number,
-        "quality": quality,
-        "bass": bass_number,
-        "extensions": extensions
+        "key": f"1 = {key_name}",
+        "key_name": key_name,
+        "key_root": key_root,
+        "chord_count": chord_count,
+        "sections": sections,
+        "all_chords": all_converted_chords,
+        "settings": {
+            "show_half_numbers": show_half_numbers
+        }
+    }
+
+class ChordChartConvertRequest(BaseModel):
+    text: str
+    key: Optional[str] = None
+    time_signature: Optional[str] = "4/4"
+    show_half_numbers: bool = True
+
+@api_router.post("/convert/text")
+async def convert_chord_chart(req: ChordChartConvertRequest, user: User = Depends(get_current_user)):
+    """
+    Convert a chord chart text to Motesart notation.
+    
+    Supports:
+    - Chords-over-lyrics format
+    - Inline [chord] format
+    - Plain chord sequences
+    """
+    result = convert_chord_chart_text(
+        req.text,
+        key_override=req.key if req.key and req.key != "auto" else None,
+        show_half_numbers=req.show_half_numbers
+    )
+    
+    return result
+
+@api_router.get("/keys")
+async def get_available_keys():
+    """Get list of available keys for the converter"""
+    return {
+        "keys": [
+            {"value": "auto", "label": "Auto-detect"},
+            {"value": "C", "label": "C"},
+            {"value": "C#", "label": "C# / Db"},
+            {"value": "D", "label": "D"},
+            {"value": "Eb", "label": "Eb / D#"},
+            {"value": "E", "label": "E"},
+            {"value": "F", "label": "F"},
+            {"value": "F#", "label": "F# / Gb"},
+            {"value": "G", "label": "G"},
+            {"value": "Ab", "label": "Ab / G#"},
+            {"value": "A", "label": "A"},
+            {"value": "Bb", "label": "Bb / A#"},
+            {"value": "B", "label": "B"},
+        ]
     }
 
 def parse_chord_chart_text(text: str) -> Dict:
