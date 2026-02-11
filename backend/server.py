@@ -2110,7 +2110,7 @@ async def export_conversion(
         )
     
     elif format == "pdf":
-        # Generate branded PDF (using ASCII-safe characters)
+        # Generate branded PDF that matches the Lead Sheet View visual preview
         from fpdf import FPDF
         
         # Helper to make strings PDF-safe (ASCII-only for fpdf compatibility)
@@ -2135,74 +2135,124 @@ async def export_conversion(
             # Remove any remaining non-ASCII characters
             return s.encode('ascii', 'ignore').decode('ascii')
         
+        # Extract key name from key_sig (e.g., "1 = Ab" -> "Ab")
+        key_name = key_sig.replace("1 = ", "") if "1 = " in key_sig else key_sig
+        
+        # Build scale reference for the key
+        note_order = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+        flat_order = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+        use_flats = key_name in ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb']
+        notes = flat_order if use_flats else note_order
+        
+        key_idx = 0
+        if key_name in note_order:
+            key_idx = note_order.index(key_name)
+        elif key_name in flat_order:
+            key_idx = flat_order.index(key_name)
+        
+        intervals = [0, 2, 4, 5, 7, 9, 11]
+        scale_ref = {}
+        for i, interval in enumerate(intervals):
+            scale_ref[i + 1] = notes[(key_idx + interval) % 12]
+        
         pdf = FPDF()
         pdf.add_page()
         
-        # Header with branding
-        pdf.set_font("Helvetica", "B", 18)
-        pdf.cell(0, 12, "Motesart Number Conversion", ln=True, align="C")
-        pdf.set_font("Helvetica", "I", 10)
+        # Header with title (matches Lead Sheet View)
+        pdf.set_font("Helvetica", "B", 20)
+        pdf.set_text_color(127, 58, 237)  # Purple for title
+        pdf.cell(0, 12, pdf_safe(title), ln=True, align="L")
+        
+        # Key signature line (amber color would be nice but PDF is B&W)
+        pdf.set_font("Courier", "B", 14)
+        pdf.set_text_color(180, 83, 9)  # Amber-ish
+        pdf.cell(0, 8, f"1 = {key_name}  |  Time: {time_sig}", ln=True, align="L")
+        
+        # Branding subtitle
+        pdf.set_font("Helvetica", "I", 9)
         pdf.set_text_color(100, 100, 100)
-        pdf.cell(0, 6, branded_header, ln=True, align="C")
+        pdf.cell(0, 6, branded_header, ln=True, align="L")
+        pdf.set_text_color(0, 0, 0)
+        
+        # Separator line
+        pdf.ln(3)
+        pdf.set_draw_color(200, 200, 200)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(5)
+        
+        # Scale Reference Box
+        pdf.set_fill_color(240, 240, 240)
+        pdf.set_font("Helvetica", "B", 10)
+        y_start = pdf.get_y()
+        pdf.cell(0, 6, "Scale Reference:", ln=True)
+        pdf.set_font("Courier", "", 10)
+        
+        # Display scale degrees in grid format
+        scale_line = "  ".join([f"{i}={scale_ref[i]}" for i in range(1, 8)])
+        pdf.cell(0, 6, scale_line + "  1/2=chromatic", ln=True)
+        
+        # Modifier legend
+        pdf.set_font("Helvetica", "I", 8)
+        pdf.set_text_color(100, 100, 100)
+        pdf.cell(0, 5, "m=minor | M=non-diatonic major | 7=7th | o=dim | +=aug | sus=suspended | /X=bass note", ln=True)
         pdf.set_text_color(0, 0, 0)
         pdf.ln(5)
         
-        # Title and Key
-        pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 10, pdf_safe(f"{title} - {key_sig}"), ln=True, align="C")
-        
-        pdf.set_font("Helvetica", "", 11)
-        pdf.cell(0, 8, f"Time: {time_sig} | Tempo: {tempo} BPM | Type: {CONTENT_TYPES.get(content_type, content_type)}", ln=True, align="C")
-        pdf.ln(8)
-        
-        # Sections & Progressions
-        pdf.set_font("Helvetica", "B", 13)
-        pdf.cell(0, 10, "Sections & Progressions", ln=True)
-        pdf.set_font("Courier", "", 11)
-        
-        for section in conversion.get("sections", []):
+        # Sections with chords and lyrics (matches Lead Sheet format)
+        sections = conversion.get("sections", [])
+        for section in sections:
             section_name = section.get("name", "Section")
-            progression = pdf_safe(section.get("progression", ""))
-            chords = section.get("chords", [])
             
-            pdf.set_font("Helvetica", "B", 11)
-            pdf.cell(0, 8, f"{section_name}:", ln=True)
+            # Section label in purple
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.set_text_color(127, 58, 237)
+            pdf.cell(0, 8, f"[{section_name}]", ln=True)
+            pdf.set_text_color(0, 0, 0)
             
-            pdf.set_font("Courier", "", 11)
-            if chords:
-                chord_symbols = " | ".join([pdf_safe(c.get("symbol", "")) for c in chords[:12]])
-                pdf.multi_cell(0, 6, chord_symbols)
-            elif progression:
-                pdf.cell(0, 6, progression, ln=True)
-            pdf.ln(3)
+            # If section has lines (chord_line / lyric_line), display them
+            lines = section.get("lines", [])
+            if lines:
+                for line in lines:
+                    line_type = line.get("type", "")
+                    if line_type == "chord_line" and line.get("converted"):
+                        # Chord numbers in bold amber
+                        pdf.set_font("Courier", "B", 14)
+                        pdf.set_text_color(180, 83, 9)
+                        pdf.cell(0, 7, pdf_safe(line.get("converted", "")), ln=True)
+                    elif line_type == "lyric_line" and line.get("original"):
+                        # Lyrics in gray
+                        pdf.set_font("Helvetica", "", 11)
+                        pdf.set_text_color(75, 85, 99)
+                        pdf.cell(0, 6, pdf_safe(line.get("original", "")), ln=True)
+                pdf.set_text_color(0, 0, 0)
+            else:
+                # Fallback: just show chords
+                chords = section.get("chords", [])
+                if chords:
+                    pdf.set_font("Courier", "B", 14)
+                    pdf.set_text_color(180, 83, 9)
+                    chord_str = "   ".join([pdf_safe(c.get("symbol", "")) for c in chords[:12]])
+                    pdf.cell(0, 7, chord_str, ln=True)
+                    pdf.set_text_color(0, 0, 0)
+            
+            # Progression summary
+            progression = section.get("progression", "")
+            if progression:
+                pdf.set_font("Helvetica", "I", 9)
+                pdf.set_text_color(100, 100, 100)
+                pdf.cell(0, 5, f"Progression: {pdf_safe(progression)}", ln=True)
+                pdf.set_text_color(0, 0, 0)
+            
+            pdf.ln(4)
         
-        # All Chords summary
-        all_chords = conversion.get("chords", [])
-        if all_chords:
-            pdf.ln(5)
-            pdf.set_font("Helvetica", "B", 13)
-            pdf.cell(0, 10, "All Chords", ln=True)
-            pdf.set_font("Courier", "", 10)
-            chord_line = " | ".join([pdf_safe(c.get("symbol", "")) for c in all_chords[:30]])
-            pdf.multi_cell(0, 6, chord_line)
-        
-        # Progressions Detected
-        progressions = conversion.get("progressions", [])
-        if progressions:
-            pdf.ln(5)
-            pdf.set_font("Helvetica", "B", 13)
-            pdf.cell(0, 10, "Progressions Detected", ln=True)
-            pdf.set_font("Helvetica", "", 11)
-            for prog in progressions:
-                prog_name = pdf_safe(prog.get('name', ''))
-                prog_desc = pdf_safe(prog.get('description', ''))
-                pdf.cell(0, 7, f"- {prog_name}: {prog_desc}", ln=True)
-        
-        # Footer Legend (ASCII-safe)
-        pdf.ln(10)
+        # Footer Legend
+        pdf.ln(8)
+        pdf.set_draw_color(200, 200, 200)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(3)
         pdf.set_font("Helvetica", "I", 8)
-        pdf.set_text_color(80, 80, 80)
-        pdf.multi_cell(0, 5, MOTESART_LEGEND)
+        pdf.set_text_color(100, 100, 100)
+        pdf.multi_cell(0, 4, "Legend: 1-7 = scale degrees | 1/2 = chromatic (only 1 1/2, 2 1/2, 4 1/2, 5 1/2, 6 1/2) | m = minor | M = non-diatonic major | 7 9 11 13 = extensions | /X = bass note")
         
         # fpdf.output() returns bytes when dest='S'
         pdf_bytes = pdf.output(dest='S').encode('latin-1')
