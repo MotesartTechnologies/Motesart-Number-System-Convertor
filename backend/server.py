@@ -723,11 +723,15 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
         quality_symbol = "m"
     else:
         # Major chord - check if diatonic
-        actual_quality = 'minor' if is_minor else 'major'
-        if not is_diatonic_chord(root_semitone, actual_quality, key_root):
-            # Rule §6: Non-diatonic major gets 'M'
-            quality_symbol = "M"
-        # Diatonic major: no modifier
+        # IMPORTANT: If the root is already chromatic (half-number), 
+        # we DON'T add 'M' marker - the half-number already indicates non-diatonic
+        if not root_chromatic:
+            # Only check diatonic status for chords on diatonic scale degrees
+            actual_quality = 'major'  # We already know it's not minor/dim/aug
+            if not is_diatonic_chord(root_semitone, actual_quality, key_root):
+                # Rule §6: Non-diatonic major gets 'M'
+                quality_symbol = "M"
+        # Chromatic roots (half-numbers) and diatonic major: no additional modifier
     
     # Build extension string with superscripts (Rule §4c)
     extension_str = ""
