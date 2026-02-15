@@ -132,7 +132,6 @@ export default function ConverterPage({ user }) {
           text: inputText,
           key: selectedKey === "auto" ? null : selectedKey,
           time_signature: timeSignature,
-          show_half_numbers: settings.showHalfNumbers,
         }),
       });
 
