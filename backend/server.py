@@ -707,31 +707,49 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
     root_degree, root_chromatic, root_number = semitone_to_degree(root_semitone - key_root)
     
     # Determine the quality string for Motesart notation
-    # Rule §6: Quality Inference
+    # Rule §6: Quality Inference - UPDATED INTERPRETATION
+    # - Diatonic chords: NO quality marker (even for minor/diminished)
+    # - Non-diatonic chords: show quality marker (m, M, °, ⁺, etc.)
+    # - Half-number roots: already indicate non-diatonic, add quality only if minor/dim/aug
+    
     quality_symbol = ""
     
-    if is_diminished:
-        quality_symbol = "°"
+    # Check if the chord is diatonic (root on diatonic scale degree with expected quality)
+    actual_quality = 'major'
+    if is_minor:
+        actual_quality = 'minor'
+    elif is_diminished:
+        actual_quality = 'diminished'
     elif is_augmented:
-        quality_symbol = "⁺"
+        actual_quality = 'augmented'
+    elif is_sus2 or is_sus4:
+        actual_quality = 'suspended'
+    
+    # Diatonic check
+    is_chord_diatonic = False
+    if not root_chromatic:  # Only check for diatonic scale degrees
+        is_chord_diatonic = is_diatonic_chord(root_semitone, actual_quality, key_root)
+    
+    # Apply quality markers based on whether chord is diatonic
+    if is_diminished:
+        quality_symbol = "" if is_chord_diatonic else "°"
+    elif is_augmented:
+        quality_symbol = "⁺"  # Augmented is never diatonic
     elif is_sus2:
-        quality_symbol = "sus²"
+        quality_symbol = "sus²"  # Suspended chords always marked
     elif is_sus4:
-        quality_symbol = "sus⁴"
+        quality_symbol = "sus⁴"  # Suspended chords always marked
     elif is_minor:
-        # Rule §6: Minor chords ALWAYS marked with 'm'
-        quality_symbol = "m"
+        # Diatonic minor: no marker; Non-diatonic minor: 'm'
+        quality_symbol = "" if is_chord_diatonic else "m"
     else:
-        # Major chord - check if diatonic
-        # IMPORTANT: If the root is already chromatic (half-number), 
-        # we DON'T add 'M' marker - the half-number already indicates non-diatonic
-        if not root_chromatic:
-            # Only check diatonic status for chords on diatonic scale degrees
-            actual_quality = 'major'  # We already know it's not minor/dim/aug
-            if not is_diatonic_chord(root_semitone, actual_quality, key_root):
-                # Rule §6: Non-diatonic major gets 'M'
-                quality_symbol = "M"
-        # Chromatic roots (half-numbers) and diatonic major: no additional modifier
+        # Major chord
+        # Diatonic major: no marker; Non-diatonic major: 'M'
+        if root_chromatic:
+            # Chromatic root (half-number) - no 'M' needed, half-number already shows non-diatonic
+            quality_symbol = ""
+        elif not is_chord_diatonic:
+            quality_symbol = "M"
     
     # Build extension string with superscripts (Rule §4c)
     extension_str = ""
