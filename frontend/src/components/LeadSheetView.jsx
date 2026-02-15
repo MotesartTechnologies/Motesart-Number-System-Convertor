@@ -298,7 +298,7 @@ export function LeadSheetView({
             </div>
           ))}
           <div style={{ color: colors.text }}>
-            <span style={{ color: colors.chordNumber, fontWeight: '700' }}>½</span> = chromatic
+            <span style={{ color: colors.chordNumber, fontWeight: '700' }}>½</span> = chromatic (1½ 2½ 4½ 5½ 6½)
           </div>
         </div>
         <div 
@@ -308,7 +308,7 @@ export function LeadSheetView({
             marginTop: `${8 * zoom}px`,
           }}
         >
-          m = minor | M = non-diatonic major | ⁷ = 7th | ° = dim | ⁺ = aug | sus = suspended | /X = bass note
+          Half-numbers represent chromatic notes. No 3½ or 7½ (natural half-steps). | m = minor | M = non-diatonic major | ⁷ = 7th | ° = dim | ⁺ = aug | /X = bass
         </div>
       </div>
 
