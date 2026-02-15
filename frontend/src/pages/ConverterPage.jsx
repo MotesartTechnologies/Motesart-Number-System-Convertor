@@ -521,19 +521,6 @@ That saved a wretch like me`}
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label htmlFor="half-numbers" className="text-sm text-slate-300">
-                  Show half-numbers
-                </Label>
-                <Switch
-                  id="half-numbers"
-                  checked={settings.showHalfNumbers}
-                  onCheckedChange={(checked) =>
-                    setSettings({ ...settings, showHalfNumbers: checked })
-                  }
-                  data-testid="toggle-half-numbers"
-                />
-              </div>
-              <div className="flex items-center justify-between">
                 <Label htmlFor="octave-markers" className="text-sm text-slate-300">
                   Octave markings
                 </Label>
@@ -559,6 +546,11 @@ That saved a wretch like me`}
                   data-testid="toggle-roman-numerals"
                 />
               </div>
+              <div className="mt-3 p-2 bg-slate-800/50 rounded-md">
+                <p className="text-xs text-amber-400/80 font-mono">
+                  1½ 2½ 4½ 5½ 6½ = chromatic notes (always shown)
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -577,7 +569,8 @@ That saved a wretch like me`}
                     <h4 className="font-semibold text-slate-200 mb-1">§3 Half-Numbers</h4>
                     <p className="text-slate-400 text-xs">
                       Valid: 1½, 2½, 4½, 5½, 6½<br />
-                      Never use 3½ or 7½ (natural half-steps)
+                      Never use 3½ or 7½ (natural half-steps)<br />
+                      <span className="text-amber-400/70">No sharp or flat symbols - only half-numbers!</span>
                     </p>
                   </div>
                   <div>
