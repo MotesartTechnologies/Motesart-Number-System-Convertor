@@ -530,10 +530,13 @@ def get_note_number(pitch: int, key_root: int) -> str:
 
 def semitone_to_degree(semitones: int) -> tuple:
     """
-    Convert semitones from root to scale degree and whether it's chromatic.
-    For CHORD ROOTS (not melodic notes), we use flat/sharp notation for chromatic tones.
+    Convert semitones from root to scale degree using ONLY half-numbers.
+    The Motesart Number System NEVER uses sharp (♯) or flat (♭) symbols.
     
-    Returns (degree_number, is_chromatic, display_symbol)
+    Valid half-numbers: 1½, 2½, 4½, 5½, 6½
+    NEVER 3½ or 7½ (these are natural half-steps)
+    
+    Returns (base_degree, is_chromatic, display_symbol)
     """
     semitones = semitones % 12
     
@@ -542,28 +545,29 @@ def semitone_to_degree(semitones: int) -> tuple:
         degree = MAJOR_SCALE_SEMITONES.index(semitones) + 1
         return (degree, False, str(degree))
     
-    # Chromatic chord roots - use flat/sharp notation
-    # This is different from melodic half-numbers
-    chromatic_chord_root_map = {
-        1: "♭2",   # C# in C = flat 2 (enharmonic)
-        3: "♭3",   # D# in C = flat 3 (actually enharmonic Eb)
-        6: "♯4",   # F# in C = sharp 4
-        8: "♯5",   # G# in C = sharp 5 (or flat 6)
-        10: "♭7",  # A# in C = flat 7 (actually Bb)
+    # Chromatic notes use half-numbers ONLY - no flats or sharps
+    # Map: semitone -> (base_degree, display)
+    half_number_map = {
+        1: (1, "1½"),   # Between 1 and 2
+        3: (2, "2½"),   # Between 2 and 3
+        6: (4, "4½"),   # Between 4 and 5
+        8: (5, "5½"),   # Between 5 and 6
+        10: (6, "6½"),  # Between 6 and 7
     }
     
-    symbol = chromatic_chord_root_map.get(semitones, f"?{semitones}")
-    # Extract the base degree for analysis
-    base_degree = int(symbol[-1]) if symbol[-1].isdigit() else 0
+    if semitones in half_number_map:
+        base_degree, symbol = half_number_map[semitones]
+        return (base_degree, True, symbol)
     
-    return (base_degree, True, symbol)
+    # Fallback (should never reach in 12-tone system)
+    return (1, True, "?")
 
 def semitone_to_melodic_number(semitones: int) -> str:
     """
     Convert semitones from root to Motesart melodic number.
     Rule §3: Only valid half-numbers are 1½, 2½, 4½, 5½, 6½ (never 3½ or 7½)
     
-    This is for MELODIC notes, not chord roots.
+    The Motesart Number System NEVER uses sharp (♯) or flat (♭) symbols.
     """
     semitones = semitones % 12
     
@@ -572,7 +576,7 @@ def semitone_to_melodic_number(semitones: int) -> str:
         return str(MAJOR_SCALE_SEMITONES.index(semitones) + 1)
     
     # Half-numbers for chromatic tones (Rule §3)
-    return HALF_NUMBER_MAP.get(semitones, f"?{semitones}")
+    return HALF_NUMBER_MAP.get(semitones, "?")
 
 def is_diatonic_chord(root_semitones: int, quality: str, key_root: int) -> bool:
     """
