@@ -95,20 +95,36 @@ Build a multi-step "Motesart Number System Converter" app that supports:
 
 ## Conversion Rules
 
-### Rule §3: Half-Numbers
-- Valid: 1½, 2½, 4½, 5½, 6½ (NEVER 3½ or 7½)
-- Chromatic chord roots use ♭/♯ notation
+### Rule §3: Half-Numbers (CRITICAL)
+The Motesart Number System **NEVER** uses sharp (♯) or flat (♭) symbols in output.
+All chromatic notes use half-numbers moving UPWARD only:
+- **Valid:** 1½, 2½, 4½, 5½, 6½
+- **NEVER:** 3½ or 7½ (these are natural half-steps)
+
+Chromatic note mapping (any key):
+- Degree + 1 semitone → half-number (e.g., C# in C = 1½)
+- All 12 chromatic notes map to: 1, 1½, 2, 2½, 3, 4, 4½, 5, 5½, 6, 6½, 7
 
 ### Rule §6: Chord Quality
-- Minor: ALWAYS marked with 'm' (e.g., Em → 6m)
-- Major: 'M' ONLY if non-diatonic
-- Diatonic major: no modifier
+- **Diatonic chords:** NO quality marker (even for minor/diminished)
+  - Am in key of C → 6 (not 6m)
+  - Em in key of G → 6 (not 6m)
+- **Non-diatonic minor:** marked with 'm'
+  - Fm in key of C → 4m
+- **Non-diatonic major:** marked with 'M'
+  - A major in key of C → 6M
+- **Chromatic root (half-number):** No 'M' marker needed
+  - C# (1½) doesn't need 'M' - the half-number already shows non-diatonic
 
 ### Rule §7: Inversions
 - Format: chord/bass (G/B → 1/3)
 
 ### Rule §4c: Extensions
 - Superscripts: 7→⁷, 9→⁹, 11→¹¹, 13→¹³
+
+### Settings
+- "Show half-numbers" toggle **REMOVED** - half-numbers are always on
+- Kept: "Show octave markings", "Roman numerals side-by-side"
 
 ## Test Credentials
 - Regular user: `testuser@example.com` / `test123456`
