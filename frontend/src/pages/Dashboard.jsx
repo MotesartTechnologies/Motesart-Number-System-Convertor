@@ -695,7 +695,7 @@ export default function Dashboard({ user }) {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-slate-400">Show half-numbers (½)</Label>
+                <Label className="text-xs text-slate-400">Show octave markings</Label>
                 <Switch defaultChecked />
               </div>
               <div className="flex items-center justify-between">
@@ -704,6 +704,14 @@ export default function Dashboard({ user }) {
                   checked={showOriginalPreview} 
                   onCheckedChange={setShowOriginalPreview}
                 />
+              </div>
+              <div className="mt-2 p-2 bg-slate-900/50 rounded-md">
+                <p className="text-xs text-slate-500">
+                  <span className="text-amber-400 font-mono">1½ 2½ 4½ 5½ 6½</span> = chromatic notes
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  No 3½ or 7½ (natural half-steps)
+                </p>
               </div>
             </CardContent>
           </Card>
