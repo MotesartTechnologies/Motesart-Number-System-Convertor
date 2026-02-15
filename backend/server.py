@@ -961,22 +961,21 @@ def convert_chord_chart_text(text: str, key_override: str = None) -> Dict:
         "key_root": key_root,
         "chord_count": chord_count,
         "sections": sections,
-        "all_chords": all_converted_chords,
-        "settings": {
-            "show_half_numbers": show_half_numbers
-        }
+        "all_chords": all_converted_chords
     }
 
 class ChordChartConvertRequest(BaseModel):
     text: str
     key: Optional[str] = None
     time_signature: Optional[str] = "4/4"
-    show_half_numbers: bool = True
 
 @api_router.post("/convert/text")
 async def convert_chord_chart(req: ChordChartConvertRequest, user: User = Depends(get_current_user)):
     """
     Convert a chord chart text to Motesart notation.
+    
+    Half-numbers (1½, 2½, 4½, 5½, 6½) are ALWAYS used for chromatic notes.
+    The Motesart Number System NEVER uses sharp or flat symbols.
     
     Supports:
     - Chords-over-lyrics format
@@ -985,8 +984,7 @@ async def convert_chord_chart(req: ChordChartConvertRequest, user: User = Depend
     """
     result = convert_chord_chart_text(
         req.text,
-        key_override=req.key if req.key and req.key != "auto" else None,
-        show_half_numbers=req.show_half_numbers
+        key_override=req.key if req.key and req.key != "auto" else None
     )
     
     return result
