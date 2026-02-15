@@ -2027,8 +2027,8 @@ User's new question: {req.message}"""
 # ==================== EXPORT (BRANDED MOTESART TEMPLATE) ====================
 
 # Motesart Legend for exports (ASCII-safe version for PDF)
-MOTESART_LEGEND = "Symbol Legend: 1/2 = chromatic step up | /X = bass first (slash) | m = minor | M = non-diatonic major | + = augmented | o = diminished | sus2/sus4 = suspensions | 9 11 13 = extensions"
-MOTESART_LEGEND_RICH = "½ = chromatic step up | /X = bass first (slash) | m = minor | M = non-diatonic major | ⁺ = augmented | ° = diminished | sus²/sus⁴ = suspensions | 2⁹ / 4¹¹ / 6¹³ = extensions"
+MOTESART_LEGEND = "Half-numbers (1 1/2, 2 1/2, 4 1/2, 5 1/2, 6 1/2) represent chromatic notes. No 3 1/2 or 7 1/2 (natural half-steps). | /X = bass first | m = minor | M = non-diatonic major | + = augmented | o = diminished | sus2/sus4 = suspensions | 7 9 11 13 = extensions"
+MOTESART_LEGEND_RICH = "Half-numbers (1½, 2½, 4½, 5½, 6½) represent chromatic notes. No 3½ or 7½ (natural half-steps). | /X = bass first | m = minor | M = non-diatonic major | ⁺ = augmented | ° = diminished | sus²/sus⁴ = suspensions | ⁷ ⁹ ¹¹ ¹³ = extensions"
 
 @api_router.get("/export/{conversion_id}")
 async def export_conversion(
