@@ -103,9 +103,8 @@ export default function ConverterPage({ user }) {
   const [conversionResult, setConversionResult] = useState(null);
   const [copied, setCopied] = useState(false);
   
-  // Settings
+  // Settings - half-numbers are ALWAYS on (removed as toggle)
   const [settings, setSettings] = useState({
-    showHalfNumbers: true,
     octaveMarkings: false,
     romanNumerals: false,
   });
