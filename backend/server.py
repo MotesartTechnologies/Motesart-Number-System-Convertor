@@ -643,6 +643,10 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
     quality_str = chord_str[len(root_name):]
     original_quality = quality_str
     
+    # Check if this is a "plain note" (no explicit quality modifiers)
+    # Plain notes (like "C", "F#", "Bb") should just show the number without quality inference
+    is_plain_note = quality_str.strip() == "" and bass_note is None
+    
     # Determine the actual chord quality from input
     is_minor = False
     is_diminished = False
