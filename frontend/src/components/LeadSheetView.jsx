@@ -386,8 +386,8 @@ export function LeadSheetView({
           color: colors.subtitle,
         }}
       >
-        Legend: 1-7 = scale degrees | ½ = chromatic (1½, 2½, 4½, 5½, 6½ only) | m = minor | 
-        M = non-diatonic major | ⁷ ⁹ ¹¹ ¹³ = extensions | /X = bass note
+        Half-numbers (1½, 2½, 4½, 5½, 6½) represent chromatic notes. No 3½ or 7½ (natural half-steps). | 
+        m = minor | M = non-diatonic major | ⁷ ⁹ ¹¹ ¹³ = extensions | /X = bass note
       </div>
     </div>
   );
