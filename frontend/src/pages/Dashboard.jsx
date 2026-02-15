@@ -247,7 +247,6 @@ export default function Dashboard({ user }) {
           text: manualChords,
           key: manualKey,
           time_signature: "4/4",
-          show_half_numbers: true,
         }),
       });
 
