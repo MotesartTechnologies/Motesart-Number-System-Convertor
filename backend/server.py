@@ -826,7 +826,7 @@ def auto_detect_key(chords: List[str]) -> tuple:
     
     return (0, "C")
 
-def convert_chord_chart_text(text: str, key_override: str = None, show_half_numbers: bool = True) -> Dict:
+def convert_chord_chart_text(text: str, key_override: str = None) -> Dict:
     """
     Convert a chord chart text to Motesart notation.
     
@@ -834,6 +834,9 @@ def convert_chord_chart_text(text: str, key_override: str = None, show_half_numb
     1. Chords-over-lyrics (Ultimate Guitar style)
     2. Inline chords [G] within lyrics
     3. Plain chord sequences (G Am C D)
+    
+    Half-numbers (1½, 2½, 4½, 5½, 6½) are ALWAYS used for chromatic notes.
+    The Motesart Number System NEVER uses sharp (♯) or flat (♭) symbols.
     
     Returns structured data with sections, converted chords, and metadata.
     """
