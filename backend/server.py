@@ -907,7 +907,7 @@ def convert_chord_chart_text(text: str, key_override: str = None) -> Dict:
         
         # Process chords in the line
         line_chords = []
-        converted_line = line_stripped
+        chord_positions = []  # Store (start, end, parsed) tuples
         
         # Find all chord positions and convert them
         for match in chord_pattern.finditer(line_stripped):
@@ -917,15 +917,17 @@ def convert_chord_chart_text(text: str, key_override: str = None) -> Dict:
                 line_chords.append(parsed)
                 all_converted_chords.append(parsed)
                 chord_count += 1
+                chord_positions.append((match.start(), match.end(), parsed))
         
         # Build the converted line with Motesart symbols
         if line_chords:
-            # Replace chords with their Motesart equivalents
-            result_line = line_stripped
-            for parsed in reversed(line_chords):  # Reverse to preserve positions
-                original = parsed["original"]
+            # Replace chords by position (in reverse order to preserve indices)
+            result_chars = list(line_stripped)
+            for start, end, parsed in reversed(chord_positions):
                 symbol = parsed["symbol"]
-                result_line = result_line.replace(original, symbol, 1)
+                # Replace characters from start to end with the symbol
+                result_chars[start:end] = list(symbol)
+            result_line = ''.join(result_chars)
             
             current_section["lines"].append({
                 "original": line_stripped,
