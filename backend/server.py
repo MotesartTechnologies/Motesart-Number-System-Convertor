@@ -765,18 +765,25 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
         if not root_chromatic:  # Only check for diatonic scale degrees
             is_chord_diatonic = is_diatonic_chord(root_semitone, actual_quality, key_root)
         
-        # Apply quality markers based on whether chord is diatonic
-        if is_diminished:
-            quality_symbol = "" if is_chord_diatonic else "°"
+        # Apply quality markers based on chord type
+        # Rule §6: Quality Inference - CORRECTED
+        # - Minor chords: ALWAYS mark with 'm' (diatonic or not)
+        # - Diminished: ALWAYS mark with '°'
+        # - Augmented: ALWAYS mark with '⁺'
+        # - Major chords: Add 'M' ONLY if non-diatonic (not on half-number root)
+        # - Diatonic major chords: no modifier
+        
+        if is_minor:
+            # ALL minor chords get 'm' marker - ALWAYS
+            quality_symbol = "m"
+        elif is_diminished:
+            quality_symbol = "°"  # Always show diminished marker
         elif is_augmented:
             quality_symbol = "⁺"  # Augmented is never diatonic
         elif is_sus2:
             quality_symbol = "sus²"  # Suspended chords always marked
         elif is_sus4:
             quality_symbol = "sus⁴"  # Suspended chords always marked
-        elif is_minor:
-            # Diatonic minor: no marker; Non-diatonic minor: 'm'
-            quality_symbol = "" if is_chord_diatonic else "m"
         elif is_explicit_major:
             # Explicit major (e.g., "Gmaj", "AM") - show 'M' if non-diatonic
             if root_chromatic:
