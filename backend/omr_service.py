@@ -517,6 +517,55 @@ def format_staff_view_data(omr_data: Dict) -> Dict:
     }
 
 
+def extract_notes_for_staff_view(omr_data: Dict) -> List[Dict]:
+    """
+    Extract notes from OMR data for staff view rendering.
+    Ensures all notes have required fields.
+    """
+    if not omr_data:
+        return []
+    
+    notes = omr_data.get('notes', [])
+    staff_notes = []
+    
+    for note in notes:
+        staff_note = {
+            'pitch': note.get('pitch', ''),
+            'pitch_name': note.get('pitch_name', note.get('pitch', '')),
+            'midi': note.get('midi'),
+            'motesart': note.get('motesart', '?'),
+            'duration': note.get('duration', 0.25),
+            'duration_type': note.get('duration_type', 'quarter'),
+            'measure': note.get('measure', 1),
+            'beat': note.get('beat', 1),
+            'lyric': note.get('lyric')
+        }
+        staff_notes.append(staff_note)
+    
+    return staff_notes
+
+
+def analyze_sheet_music_image(image_path: str, key_override: str = None) -> Dict:
+    """
+    Analyze a sheet music image using Gemini AI.
+    This is a wrapper for backward compatibility.
+    """
+    result = analyze_with_gemini_sync(image_path, key_override)
+    
+    if result.get('success'):
+        # If key override provided, recalculate Motesart degrees
+        if key_override:
+            key_root = get_key_root_semitone(key_override)
+            for note in result.get('notes', []):
+                pitch = note.get('pitch', '')
+                note['motesart'] = pitch_to_motesart(pitch, key_root)
+            result['key_name'] = key_override
+            result['key_signature'] = key_override
+            result['key_root_semitone'] = key_root
+    
+    return result
+
+
 # Command-line testing
 if __name__ == "__main__":
     import sys
