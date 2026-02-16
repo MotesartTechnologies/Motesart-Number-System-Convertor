@@ -824,7 +824,7 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
     # Build the final symbol
     symbol = root_number + quality_symbol + extension_str
     
-    # Handle slash bass note - Rule §7: chord/bass format
+    # Handle slash bass note - Rule §7: bass/chord format
     bass_number = None
     if bass_note:
         bass_match = re.match(r'^([A-G][#b]?)', bass_note)
@@ -832,8 +832,9 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
             bass_root = bass_match.group(1)
             bass_semitone = CHORD_ROOT_MAP.get(bass_root, 0)
             _, _, bass_number = semitone_to_degree(bass_semitone - key_root)
-            # Rule §7: Format as chord/bass (e.g., 1/3 means 1-chord with 3 in bass)
-            symbol = f"{symbol}/{bass_number}"
+            # Rule §7: Format as bass/chord (e.g., G/B in key of G → 3/1)
+            # Bass note comes first, then the chord
+            symbol = f"{bass_number}/{symbol}"
     
     return {
         "original": original_chord,
