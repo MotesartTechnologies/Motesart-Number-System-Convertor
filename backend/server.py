@@ -1736,9 +1736,20 @@ async def upload_file(file: UploadFile = File(...), user: User = Depends(get_cur
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
-    # Store file content
+    # Store file content - for large files, save to disk instead of MongoDB
     import base64
-    conversion_doc["file_data"] = base64.b64encode(content).decode('utf-8')
+    UPLOAD_DIR = Path("/app/uploads")
+    UPLOAD_DIR.mkdir(exist_ok=True)
+    
+    # Save file to disk
+    file_path = UPLOAD_DIR / f"{conversion_id}.{extension}"
+    with open(file_path, 'wb') as f:
+        f.write(content)
+    conversion_doc["file_path"] = str(file_path)
+    
+    # Only store small files (<10MB) in MongoDB for quick access
+    if file_size < 10 * 1024 * 1024:
+        conversion_doc["file_data"] = base64.b64encode(content).decode('utf-8')
     
     await db.conversions.insert_one(conversion_doc)
     
