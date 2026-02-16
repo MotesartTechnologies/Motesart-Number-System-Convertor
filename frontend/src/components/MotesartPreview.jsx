@@ -9,6 +9,8 @@ import {
   Download,
   Copy,
   Image,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StaffNotationView } from "./StaffNotationView";
@@ -23,12 +25,17 @@ export function MotesartPreview({
   keySignature,
   timeSignature = "4/4",
   isStaffNotation = false,
+  omrNotes = [],
+  omrMeasures = [],
+  omrLyrics = [],
   onExport,
+  onOMRProcessed,
 }) {
   const [viewMode, setViewMode] = useState(isStaffNotation ? "staff" : "leadsheet");
   const [zoom, setZoom] = useState(1);
   const [showOriginalChords, setShowOriginalChords] = useState(false);
   const [printMode, setPrintMode] = useState(false);
+  const [isProcessingOMR, setIsProcessingOMR] = useState(false);
   
   const staffCanvasRef = useRef(null);
   const leadSheetRef = useRef(null);
@@ -41,6 +48,52 @@ export function MotesartPreview({
   const handleCanvasReady = useCallback((canvas) => {
     staffCanvasRef.current = canvas;
   }, []);
+
+  // Process OMR for sheet music
+  const handleProcessOMR = async () => {
+    if (!conversionId) {
+      toast.error("No conversion selected");
+      return;
+    }
+    
+    setIsProcessingOMR(true);
+    toast.info("Processing sheet music with OMR...", { duration: 5000 });
+    
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/conversions/${conversionId}/omr`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key_override: keySignature }),
+        }
+      );
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.omr_success) {
+          toast.success(`OMR complete! Extracted ${result.omr_notes?.length || 0} notes.`);
+          // Switch to staff view
+          setViewMode("staff");
+          // Notify parent to refresh conversion data
+          if (onOMRProcessed) {
+            onOMRProcessed(result);
+          }
+        } else {
+          toast.warning(result.omr_error || "OMR could not extract notes. Try Manual Entry.");
+        }
+      } else {
+        throw new Error("OMR processing failed");
+      }
+    } catch (error) {
+      console.error("OMR error:", error);
+      toast.error("OMR processing failed: " + error.message);
+    } finally {
+      setIsProcessingOMR(false);
+    }
+  };
 
   // Export as PDF
   const handleExportPDF = async () => {
