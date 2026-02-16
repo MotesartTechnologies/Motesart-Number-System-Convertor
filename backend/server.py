@@ -1957,7 +1957,11 @@ async def process_conversion_omr(
     if not conversion:
         raise HTTPException(status_code=404, detail="Conversion not found")
     
-    if not conversion.get("file_data"):
+    # Check for file data - either in MongoDB or on disk
+    has_file = conversion.get("file_data") or (
+        conversion.get("file_path") and os.path.exists(conversion["file_path"])
+    )
+    if not has_file:
         raise HTTPException(status_code=400, detail="No file data available for OMR processing")
     
     # Update status to processing
