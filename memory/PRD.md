@@ -112,18 +112,24 @@ Chromatic note mapping (any key):
 - All 12 chromatic notes map to: 1, 1½, 2, 2½, 3, 4, 4½, 5, 5½, 6, 6½, 7
 
 ### Rule §6: Chord Quality
-- **Diatonic chords:** NO quality marker (even for minor/diminished)
-  - Am in key of C → 6 (not 6m)
-  - Em in key of G → 6 (not 6m)
-- **Non-diatonic minor:** marked with 'm'
+- **Minor chords:** ALWAYS marked with 'm'
+  - Am in key of C → 6m
+  - Em in key of G → 6m
   - Fm in key of C → 4m
+- **Diatonic major chords:** NO quality marker
+  - C in key of C → 1
+  - F in key of C → 4
 - **Non-diatonic major:** marked with 'M'
-  - A major in key of C → 6M
+  - E major in key of C → 3M (explicit like "Emaj")
 - **Chromatic root (half-number):** No 'M' marker needed
   - C# (1½) doesn't need 'M' - the half-number already shows non-diatonic
+- **Diminished:** marked with '°'
+- **Augmented:** marked with '⁺'
 
 ### Rule §7: Inversions
-- Format: chord/bass (G/B → 1/3)
+- Format: bass/chord (bass note first, chord second)
+  - G/B in G → 3/1 (B is 3, G chord is 1)
+  - C/E in C → 3/1 (E is 3, C chord is 1)
 
 ### Rule §4c: Extensions
 - Superscripts: 7→⁷, 9→⁹, 11→¹¹, 13→¹³
