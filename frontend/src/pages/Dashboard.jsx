@@ -786,7 +786,7 @@ export default function Dashboard({ user }) {
                   }
                   timeSignature={selectedConversion?.time_signature || "4/4"}
                   isStaffNotation={selectedConversion?.is_sheet_music && selectedConversion?.file_type === 'pdf'}
-                  omrNotes={selectedConversion?.omr_notes || []}
+                  omrNotes={manualStaffNotes.length > 0 ? manualStaffNotes : (selectedConversion?.omr_notes || [])}
                   omrMeasures={selectedConversion?.omr_measures || []}
                   omrLyrics={selectedConversion?.omr_lyrics || []}
                   onOMRProcessed={(result) => {
@@ -795,6 +795,10 @@ export default function Dashboard({ user }) {
                       ...prev,
                       ...result,
                     }));
+                    // If OMR failed, show note entry
+                    if (!result.omr_success) {
+                      setShowNoteEntry(true);
+                    }
                   }}
                 />
               ) : (
@@ -820,6 +824,21 @@ export default function Dashboard({ user }) {
               )}
             </CardContent>
           </Card>
+
+          {/* Manual Note Entry for Staff View (when OMR fails or user wants to add notes) */}
+          {(showNoteEntry || selectedConversion?.omr_success === false) && selectedConversion?.file_type && (
+            <ManualNoteEntry
+              keySignature={
+                selectedConversion?.key_name ||
+                selectedConversion?.key_signature?.replace('1 = ', '') || 
+                'C'
+              }
+              initialNotes={manualStaffNotes}
+              onNotesChange={(notes) => {
+                setManualStaffNotes(notes);
+              }}
+            />
+          )}
 
           {/* Manual Entry Panel (Collapsible) */}
           {showManualEntry && (
