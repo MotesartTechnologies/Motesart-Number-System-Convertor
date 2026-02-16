@@ -244,7 +244,7 @@ def parse_musicxml_with_music21(musicxml_path: str) -> Dict:
         Dictionary with extracted musical data
     """
     try:
-        from music21 import converter, key, meter, note, chord, stream
+        from music21 import converter, key, meter, note, chord, stream, harmony
         
         logger.info(f"Parsing MusicXML with music21: {musicxml_path}")
         
@@ -258,6 +258,7 @@ def parse_musicxml_with_music21(musicxml_path: str) -> Dict:
             'time_signature': '4/4',
             'measures': [],
             'notes': [],
+            'chords': [],  # For chord symbols
             'lyrics': [],
             'title': None,
             'composer': None,
@@ -281,23 +282,22 @@ def parse_musicxml_with_music21(musicxml_path: str) -> Dict:
         if time_sigs:
             result['time_signature'] = str(time_sigs[0])
         
-        # Extract notes from all parts
+        # Extract notes AND chord symbols from all parts
         key_root = result['key_root_semitone']
         
         for part_idx, part in enumerate(score.parts):
-            part_notes = []
-            
             for measure in part.recurse().getElementsByClass(stream.Measure):
                 measure_data = {
                     'number': measure.number,
                     'notes': [],
                     'chords': [],
+                    'harmony': [],
                     'lyrics': []
                 }
                 
                 for element in measure.recurse():
+                    # Handle individual notes
                     if isinstance(element, note.Note):
-                        # Extract note data
                         note_data = {
                             'pitch': element.pitch.nameWithOctave,
                             'pitch_name': element.pitch.name,
@@ -308,16 +308,48 @@ def parse_musicxml_with_music21(musicxml_path: str) -> Dict:
                             'motesart': pitch_to_motesart(element.pitch.name, key_root),
                         }
                         
-                        # Extract lyrics if any
                         if element.lyrics:
                             note_data['lyric'] = ' '.join([l.text for l in element.lyrics if l.text])
                             result['lyrics'].append(note_data['lyric'])
                         
                         measure_data['notes'].append(note_data)
-                        part_notes.append(note_data)
+                        result['notes'].append(note_data)
+                    
+                    # Handle chord symbols (harmony)
+                    elif isinstance(element, harmony.ChordSymbol):
+                        chord_data = {
+                            'symbol': element.figure,
+                            'root': element.root().name if element.root() else '',
+                            'bass': element.bass().name if element.bass() else '',
+                            'kind': element.chordKind if hasattr(element, 'chordKind') else '',
+                            'offset': float(element.offset),
+                        }
                         
+                        # Convert root to Motesart
+                        if chord_data['root']:
+                            chord_data['motesart'] = pitch_to_motesart(chord_data['root'], key_root)
+                        
+                        measure_data['harmony'].append(chord_data)
+                        result['chords'].append(chord_data)
+                        
+                        # Also create a "note" entry for the chord root for staff display
+                        if chord_data['root']:
+                            # Get MIDI for root (assume octave 4)
+                            root_midi = NOTE_TO_SEMITONE.get(chord_data['root'].replace('-', 'b'), 0) + 60
+                            result['notes'].append({
+                                'pitch': chord_data['root'] + '4',
+                                'pitch_name': chord_data['root'],
+                                'midi': root_midi,
+                                'duration': 1.0,
+                                'duration_type': 'quarter',
+                                'offset': chord_data['offset'],
+                                'motesart': chord_data.get('motesart', '?'),
+                                'is_chord_root': True,
+                                'chord_symbol': chord_data['symbol'],
+                            })
+                        
+                    # Handle actual chords (multiple notes)
                     elif isinstance(element, chord.Chord):
-                        # Extract chord data
                         chord_notes = []
                         for p in element.pitches:
                             chord_notes.append({
@@ -333,13 +365,23 @@ def parse_musicxml_with_music21(musicxml_path: str) -> Dict:
                             'duration_type': element.duration.type,
                             'offset': float(element.offset),
                         })
+                        
+                        # Add each note in the chord to the notes list
+                        for cn in chord_notes:
+                            result['notes'].append({
+                                'pitch': cn['pitch'],
+                                'pitch_name': cn['pitch_name'],
+                                'midi': cn['midi'],
+                                'duration': float(element.duration.quarterLength),
+                                'duration_type': element.duration.type,
+                                'offset': float(element.offset),
+                                'motesart': cn['motesart'],
+                            })
                 
-                if measure_data['notes'] or measure_data['chords']:
+                if measure_data['notes'] or measure_data['chords'] or measure_data['harmony']:
                     result['measures'].append(measure_data)
-            
-            result['notes'].extend(part_notes)
         
-        logger.info(f"Extracted {len(result['notes'])} notes, {len(result['measures'])} measures")
+        logger.info(f"Extracted {len(result['notes'])} notes, {len(result['chords'])} chord symbols, {len(result['measures'])} measures")
         return result
         
     except Exception as e:
