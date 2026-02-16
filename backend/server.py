@@ -1919,6 +1919,159 @@ async def update_conversion_manual(
     )
     return updated
 
+
+class OMRProcessRequest(BaseModel):
+    key_override: Optional[str] = None
+
+
+@api_router.post("/conversions/{conversion_id}/omr")
+async def process_conversion_omr(
+    conversion_id: str,
+    request: OMRProcessRequest = None,
+    user: User = Depends(get_current_user)
+):
+    """
+    Process a conversion with full OMR (Optical Music Recognition).
+    Extracts individual notes from sheet music images/PDFs.
+    
+    Uses oemer for image-based OMR and music21 for parsing.
+    """
+    conversion = await db.conversions.find_one(
+        {"conversion_id": conversion_id, "user_id": user.user_id},
+        {"_id": 0}
+    )
+    if not conversion:
+        raise HTTPException(status_code=404, detail="Conversion not found")
+    
+    if not conversion.get("file_data"):
+        raise HTTPException(status_code=400, detail="No file data available for OMR processing")
+    
+    # Update status to processing
+    await db.conversions.update_one(
+        {"conversion_id": conversion_id},
+        {"$set": {
+            "status": "processing_omr",
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    try:
+        import base64
+        file_data = base64.b64decode(conversion["file_data"])
+        file_type = conversion.get("file_type", "pdf")
+        
+        # Save to temp file for OMR processing
+        temp_suffix = f".{file_type}"
+        if file_type in ["heic", "heif"]:
+            temp_suffix = ".png"  # Already converted
+            
+        with tempfile.NamedTemporaryFile(suffix=temp_suffix, delete=False) as tmp:
+            tmp.write(file_data)
+            temp_path = tmp.name
+        
+        logger.info(f"Processing OMR for {conversion_id}, file type: {file_type}")
+        
+        # Run OMR processing
+        omr_result = process_sheet_music_omr(temp_path)
+        
+        # Clean up temp file
+        try:
+            os.remove(temp_path)
+        except:
+            pass
+        
+        if omr_result.get("success"):
+            # Extract notes for staff view
+            staff_notes = extract_notes_for_staff_view(omr_result)
+            
+            # Apply key override if provided
+            key_name = omr_result.get("key_name", "C")
+            if request and request.key_override:
+                key_name = request.key_override
+                # Recalculate Motesart degrees with new key
+                key_root = get_key_root_semitone(key_name)
+                for note in staff_notes:
+                    note["motesart"] = pitch_to_motesart(note["pitch"], key_root)
+            
+            # Update conversion with OMR results
+            update_data = {
+                "status": "completed",
+                "omr_processed": True,
+                "omr_success": True,
+                "key_signature": f"1 = {key_name}",
+                "key_name": key_name,
+                "key_root": get_key_root_semitone(key_name),
+                "time_signature": omr_result.get("time_signature", "4/4"),
+                "title": omr_result.get("title") or conversion.get("filename", "").split(".")[0],
+                "omr_notes": staff_notes,
+                "omr_measures": omr_result.get("measures", []),
+                "omr_lyrics": omr_result.get("lyrics", []),
+                "content_type": "traditional",
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            await db.conversions.update_one(
+                {"conversion_id": conversion_id},
+                {"$set": update_data}
+            )
+            
+            logger.info(f"OMR completed for {conversion_id}: {len(staff_notes)} notes extracted")
+            
+        else:
+            # OMR failed - try image analysis fallback
+            logger.warning(f"OMR failed for {conversion_id}: {omr_result.get('error')}")
+            
+            # Try basic image analysis
+            with tempfile.NamedTemporaryFile(suffix=temp_suffix, delete=False) as tmp:
+                tmp.write(file_data)
+                temp_path = tmp.name
+            
+            analysis_result = analyze_sheet_music_image(
+                temp_path, 
+                key_override=request.key_override if request else None
+            )
+            
+            try:
+                os.remove(temp_path)
+            except:
+                pass
+            
+            await db.conversions.update_one(
+                {"conversion_id": conversion_id},
+                {"$set": {
+                    "status": "uploaded",
+                    "omr_processed": True,
+                    "omr_success": False,
+                    "omr_error": omr_result.get("error", "OMR processing failed"),
+                    "image_analysis": analysis_result,
+                    "status_message": "OMR could not extract notes. Use Manual Entry to add chords.",
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+        
+    except Exception as e:
+        logger.error(f"OMR processing error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        await db.conversions.update_one(
+            {"conversion_id": conversion_id},
+            {"$set": {
+                "status": "error",
+                "omr_processed": True,
+                "omr_success": False,
+                "omr_error": str(e),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    
+    # Return updated conversion
+    updated = await db.conversions.find_one(
+        {"conversion_id": conversion_id},
+        {"_id": 0, "file_data": 0}
+    )
+    return updated
+
 @api_router.delete("/conversions/{conversion_id}")
 async def delete_conversion(conversion_id: str, user: User = Depends(get_current_user)):
     """Delete a conversion"""
