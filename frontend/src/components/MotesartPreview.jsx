@@ -339,6 +339,11 @@ export function MotesartPreview({
             printMode={printMode}
             showOriginalChords={showOriginalChords}
             zoom={zoom}
+            omrNotes={omrNotes}
+            omrMeasures={omrMeasures}
+            omrLyrics={omrLyrics}
+            isProcessing={isProcessingOMR}
+            onProcessOMR={conversionId ? handleProcessOMR : null}
             onCanvasReady={handleCanvasReady}
           />
         ) : (
