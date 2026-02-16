@@ -150,7 +150,7 @@ export function ManualNoteEntry({
               <SelectValue placeholder="♮" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">♮ Natural</SelectItem>
+              <SelectItem value="natural">♮ Natural</SelectItem>
               <SelectItem value="#">♯ Sharp</SelectItem>
               <SelectItem value="b">♭ Flat</SelectItem>
             </SelectContent>
