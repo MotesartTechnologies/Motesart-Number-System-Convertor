@@ -619,12 +619,13 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
     Parse a chord symbol (like "Am7", "G/B", "Cmaj7") into Motesart notation.
     
     Rule §6: Chord Quality Inference
-    - Minor chords: ALWAYS mark with 'm' (e.g., Em → 6m)
+    - Minor chords: ALWAYS mark with 'm' (e.g., Am → 6m, Em → 3m)
+    - Diminished chords: ALWAYS mark with '°'
     - Major chords: Add 'M' ONLY if non-diatonic
     - Diatonic major chords: no modifier
     
-    Rule §7: Inversions - chord/bass format (NOT bass/chord)
-    - G/B in key of G → 1/3 (1-chord with 3 in bass)
+    Rule §7: Inversions - bass/chord format
+    - G/B in key of G → 3/1 (bass first, chord second)
     
     Rule §4c: Extensions with superscripts
     - 7→⁷, 9→⁹, 11→¹¹, 13→¹³
