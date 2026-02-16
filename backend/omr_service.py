@@ -268,7 +268,10 @@ IMPORTANT:
 
 
 def analyze_with_gemini_sync(image_path: str, key_hint: str = None) -> Dict:
-    """Synchronous wrapper for analyze_with_gemini."""
+    """Synchronous wrapper for analyze_with_gemini - for use outside async context."""
+    import nest_asyncio
+    nest_asyncio.apply()
+    
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
