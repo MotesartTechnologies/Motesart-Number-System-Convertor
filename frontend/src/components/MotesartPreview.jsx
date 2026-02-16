@@ -352,6 +352,38 @@ export function MotesartPreview({
         </Button>
       </div>
 
+      {/* Original File Preview (collapsible) */}
+      {showOriginalFile && conversionId && (
+        <div className="border-b border-slate-700 p-4 bg-slate-900/50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-300">Original File</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowOriginalFile(false)}
+              className="h-6 px-2 text-xs"
+            >
+              Close
+            </Button>
+          </div>
+          <div className="aspect-video max-h-[300px] rounded-lg bg-slate-800/50 border border-slate-700 overflow-hidden">
+            {fileType === "pdf" ? (
+              <iframe
+                src={`${BACKEND_URL}/api/conversions/${conversionId}/file`}
+                className="w-full h-full"
+                title="Original PDF"
+              />
+            ) : (
+              <img
+                src={`${BACKEND_URL}/api/conversions/${conversionId}/file`}
+                alt="Original Sheet Music"
+                className="w-full h-full object-contain"
+              />
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Preview Area */}
       <div 
         className={`flex-1 overflow-auto p-4 ${printMode ? "bg-white" : "bg-[#0a0a1a]"}`}
