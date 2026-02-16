@@ -16,6 +16,15 @@ import json
 import tempfile
 import re
 
+# Import OMR service
+from omr_service import (
+    process_sheet_music_omr,
+    extract_notes_for_staff_view,
+    pitch_to_motesart,
+    get_key_root_semitone,
+    analyze_sheet_music_image
+)
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
