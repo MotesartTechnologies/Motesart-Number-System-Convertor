@@ -260,6 +260,20 @@ export function MotesartPreview({
           <Eye className="w-4 h-4 mr-1" />
           Show Chords
         </Button>
+        
+        {/* View Original File */}
+        {conversionId && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleShowOriginal}
+            className={showOriginalFile ? "bg-neon-purple/20 text-neon-purple" : ""}
+            title="View original uploaded file"
+          >
+            <Image className="w-4 h-4 mr-1" />
+            Original
+          </Button>
+        )}
 
         <Button
           variant="ghost"
