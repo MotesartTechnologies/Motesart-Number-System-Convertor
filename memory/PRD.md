@@ -139,11 +139,12 @@ Chromatic note mapping (any key):
 - Kept: "Show octave markings", "Roman numerals side-by-side"
 
 ## Test Credentials
-- Regular user: `testuser@example.com` / `test123456`
-- Founder user: `motesartproductions@gmail.com` / `founder123456`
+- Regular user: `test@example.com` / `Test123!`
+- Founder user: `motesartproductions@gmail.com` / (via Google Auth)
 
 ## Test Reports
-- `/app/test_reports/iteration_9.json` - Lead Sheet View & Live Preview (100%)
+- `/app/test_reports/iteration_10.json` - Phase 1 Bug Fixes & Phase 3 OMR (100% pass)
+- Test file: `/app/backend/tests/test_phase1_bug_fixes.py`
 
 ## Prioritized Backlog
 
@@ -151,25 +152,22 @@ Chromatic note mapping (any key):
 - [x] Lead Sheet View (Format B) rendering
 - [x] Manual Entry with live preview
 - [x] Export matches visual preview
-- [x] Basic Staff View (Phase 1)
 - [x] Chromatic note handling with half-numbers (no sharps/flats)
-- [x] Slash notation (inversions) working
-- [x] Quality markers fixed (diatonic = no marker)
+- [x] Slash notation (bass/chord format)
+- [x] Minor chord markers (ALL minors get 'm')
+- [x] Gemini-based OMR for image analysis
+- [x] Staff View with Motesart numbers on notes
 
-### P1 (In Progress - Phase 2)
-- [x] OMR infrastructure created (oemer, music21, omr_service.py)
-- [x] File upload saves to disk for large files
-- [x] OMR endpoint `/api/conversions/{id}/omr` created
-- [x] Manual Note Entry component for Staff View
-- [ ] Audiveris deep learning OMR (requires specialized models)
-- [ ] Enhanced Staff View with rhythmic notation
+### P1 (In Progress)
+- [ ] Toolbar functionality (Zoom, Print mode)
+- [ ] Multi-page PDF processing for OMR
+- [ ] Lyrics extraction and display under notes
 
-### P2 (Phase 2 - Deferred)
-- [ ] Full Audiveris integration for accurate note extraction
-- [ ] Per-note rendering on staff with correct positions
+### P2 (Future)
 - [ ] Hymnal SATB analysis
 - [ ] Airtable integration
 - [ ] Leaderboard page
+- [ ] Export as MusicXML with Motesart
 
 ## Files of Reference
 - `/app/backend/server.py` - Backend with all endpoints
