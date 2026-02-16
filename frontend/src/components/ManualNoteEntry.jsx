@@ -64,22 +64,26 @@ export function ManualNoteEntry({
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [currentNote, setCurrentNote] = useState('C');
-  const [currentAccidental, setCurrentAccidental] = useState('');
+  const [currentAccidental, setCurrentAccidental] = useState('natural');
   const [currentOctave, setCurrentOctave] = useState('4');
   const [currentDuration, setCurrentDuration] = useState('0.25');
   const [currentLyric, setCurrentLyric] = useState('');
   
   const keyRootMidi = getKeyRootMidi(keySignature);
   
+  // Get actual accidental value for calculations (convert 'natural' to '')
+  const getAccidentalValue = (acc) => acc === 'natural' ? '' : acc;
+  
   // Add a note
   const addNote = () => {
-    const midi = noteToMidi(currentNote, currentAccidental, currentOctave);
+    const accidentalValue = getAccidentalValue(currentAccidental);
+    const midi = noteToMidi(currentNote, accidentalValue, currentOctave);
     const motesart = midiToMotesart(midi, keyRootMidi);
     
     const newNote = {
       id: Date.now(),
-      pitch: `${currentNote}${currentAccidental}${currentOctave}`,
-      pitch_name: `${currentNote}${currentAccidental}`,
+      pitch: `${currentNote}${accidentalValue}${currentOctave}`,
+      pitch_name: `${currentNote}${accidentalValue}`,
       midi,
       motesart,
       duration: parseFloat(currentDuration),
