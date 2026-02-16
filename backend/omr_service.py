@@ -556,12 +556,14 @@ def parse_musicxml_with_music21(musicxml_path: str) -> Dict:
         return None
 
 
-def process_sheet_music_omr(file_path: str) -> Dict:
+def process_sheet_music_omr(file_path: str, use_gemini: bool = True) -> Dict:
     """
     Main entry point for OMR processing.
+    Uses Gemini AI as the primary method for image analysis.
     
     Args:
         file_path: Path to the sheet music file (PDF or image)
+        use_gemini: If True, use Gemini AI for image analysis (default)
         
     Returns:
         Dictionary with extracted and converted musical data
@@ -577,44 +579,64 @@ def process_sheet_music_omr(file_path: str) -> Dict:
         'notes': [],
         'measures': [],
         'lyrics': [],
+        'chords': [],
         'title': None,
+        'analysis_method': None,
     }
     
     try:
         file_ext = os.path.splitext(file_path)[1].lower()
+        image_path = None
+        temp_images = []
         
-        # Handle PDF files
+        # Handle PDF files - convert to image first
         if file_ext == '.pdf':
             image_paths = process_pdf_to_images(file_path)
             if not image_paths:
                 result['error'] = "Failed to convert PDF to images"
                 return result
+            image_path = image_paths[0]  # Use first page
+            temp_images = image_paths
             
-            # Process first page (can extend to multiple pages)
-            musicxml_path = process_image_with_oemer(image_paths[0])
-            
-            # Clean up temp images
-            for img_path in image_paths:
-                try:
-                    os.remove(img_path)
-                except:
-                    pass
-                    
         # Handle image files
-        elif file_ext in ['.png', '.jpg', '.jpeg', '.heic', '.tiff', '.bmp']:
-            musicxml_path = process_image_with_oemer(file_path)
+        elif file_ext in ['.png', '.jpg', '.jpeg', '.webp']:
+            image_path = file_path
+            
+        # Handle HEIC files - convert to PNG first
+        elif file_ext == '.heic':
+            try:
+                from PIL import Image
+                import pillow_heif
+                pillow_heif.register_heif_opener()
+                
+                heic_img = Image.open(file_path)
+                temp_png = tempfile.mktemp(suffix='.png')
+                heic_img.save(temp_png, 'PNG')
+                image_path = temp_png
+                temp_images.append(temp_png)
+            except Exception as e:
+                logger.error(f"HEIC conversion failed: {e}")
+                result['error'] = f"Could not convert HEIC file: {e}"
+                return result
         
         # Handle MusicXML files directly
         elif file_ext in ['.xml', '.musicxml', '.mxl']:
-            musicxml_path = file_path
-        
-        # Handle MIDI files
-        elif file_ext in ['.mid', '.midi']:
-            # music21 can parse MIDI directly
             parsed = parse_musicxml_with_music21(file_path)
             if parsed:
                 result.update(parsed)
                 result['success'] = True
+                result['analysis_method'] = 'musicxml'
+            else:
+                result['error'] = "Failed to parse MusicXML file"
+            return result
+        
+        # Handle MIDI files
+        elif file_ext in ['.mid', '.midi']:
+            parsed = parse_musicxml_with_music21(file_path)
+            if parsed:
+                result.update(parsed)
+                result['success'] = True
+                result['analysis_method'] = 'midi'
             else:
                 result['error'] = "Failed to parse MIDI file"
             return result
@@ -623,16 +645,56 @@ def process_sheet_music_omr(file_path: str) -> Dict:
             result['error'] = f"Unsupported file format: {file_ext}"
             return result
         
-        # Parse the MusicXML if we got one
-        if musicxml_path and os.path.exists(musicxml_path):
-            parsed = parse_musicxml_with_music21(musicxml_path)
-            if parsed:
-                result.update(parsed)
+        # Now process the image with Gemini AI
+        if image_path and use_gemini:
+            logger.info(f"Using Gemini AI for OMR analysis: {image_path}")
+            gemini_result = analyze_with_gemini_sync(image_path)
+            
+            if gemini_result.get('success'):
+                # Update result with Gemini data
                 result['success'] = True
+                result['analysis_method'] = 'gemini'
+                result['key_signature'] = gemini_result.get('key_signature')
+                result['key_name'] = gemini_result.get('key_signature', 'C').replace(' major', '').replace(' minor', '')
+                result['key_root_semitone'] = gemini_result.get('key_root_semitone', 0)
+                result['time_signature'] = gemini_result.get('time_signature', '4/4')
+                result['title'] = gemini_result.get('title')
+                result['notes'] = gemini_result.get('notes', [])
+                result['chords'] = gemini_result.get('chords', [])
+                result['lyrics'] = gemini_result.get('lyrics_lines', [])
+                
+                # Add MIDI values for notes if not present
+                for note in result['notes']:
+                    if 'midi' not in note:
+                        pitch = note.get('pitch', 'C4')
+                        note_name = ''.join(c for c in pitch if not c.isdigit()).replace('-', 'b')
+                        octave = int(''.join(c for c in pitch if c.isdigit()) or '4')
+                        semitone = NOTE_TO_SEMITONE.get(note_name, 0)
+                        note['midi'] = semitone + (octave + 1) * 12
+                
+                logger.info(f"Gemini extracted {len(result['notes'])} notes")
             else:
-                result['error'] = "Failed to parse MusicXML output"
-        else:
-            result['error'] = "OMR processing did not produce MusicXML output"
+                # Gemini failed, fall back to traditional method
+                logger.warning(f"Gemini analysis failed: {gemini_result.get('error')}")
+                result['error'] = gemini_result.get('error')
+                
+                # Try fallback OCR method
+                if image_path:
+                    musicxml_path = process_image_with_oemer(image_path)
+                    if musicxml_path and os.path.exists(musicxml_path):
+                        parsed = parse_musicxml_with_music21(musicxml_path)
+                        if parsed:
+                            result.update(parsed)
+                            result['success'] = True
+                            result['analysis_method'] = 'ocr_fallback'
+        
+        # Clean up temp images
+        for temp_path in temp_images:
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except:
+                pass
         
         return result
         
