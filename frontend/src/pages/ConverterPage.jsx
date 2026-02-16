@@ -584,8 +584,8 @@ That saved a wretch like me`}
                   <div>
                     <h4 className="font-semibold text-slate-200 mb-1">§7 Inversions</h4>
                     <p className="text-slate-400 text-xs">
-                      Format: chord/bass<br />
-                      Example: G/B → 1/3 (1-chord with 3 in bass)
+                      Format: bass/chord<br />
+                      Example: G/B → 3/1 (3 in bass, 1-chord)
                     </p>
                   </div>
                   <div>
