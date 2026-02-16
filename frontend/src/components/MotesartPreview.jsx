@@ -30,12 +30,15 @@ export function MotesartPreview({
   omrLyrics = [],
   onExport,
   onOMRProcessed,
+  onShowOriginal,
+  fileType,
 }) {
   const [viewMode, setViewMode] = useState(isStaffNotation ? "staff" : "leadsheet");
   const [zoom, setZoom] = useState(1);
   const [showOriginalChords, setShowOriginalChords] = useState(false);
   const [printMode, setPrintMode] = useState(false);
   const [isProcessingOMR, setIsProcessingOMR] = useState(false);
+  const [showOriginalFile, setShowOriginalFile] = useState(false);
   
   const staffCanvasRef = useRef(null);
   const leadSheetRef = useRef(null);
@@ -43,6 +46,15 @@ export function MotesartPreview({
   // Zoom controls
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 2));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
+  
+  // Toggle original file view
+  const handleShowOriginal = () => {
+    if (onShowOriginal) {
+      onShowOriginal();
+    } else {
+      setShowOriginalFile(!showOriginalFile);
+    }
+  };
 
   // Store canvas reference for export
   const handleCanvasReady = useCallback((canvas) => {
