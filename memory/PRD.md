@@ -27,37 +27,31 @@ Build a multi-step "Motesart Number System Converter" app that supports:
 - Complete Dashboard Reorganization with Manual Entry fallback
 - Scrollable right column layout
 
-### Phase 1.8 - February 11, 2026 (CURRENT)
-**Visual Preview Implementation:**
+### Phase 1.9 - February 11, 2026 (CURRENT)
+**Text Converter Bug Fixes:**
 
-1. **Lead Sheet View (Format B)** ✅
-   - Title in purple/violet
-   - Key signature "1 = Ab" in amber/gold
-   - Section labels [Verse], [Chorus] in purple
-   - Chord numbers in gold above lyrics
-   - Scale Reference box with all 7 degrees
-   - Progression summary boxes per section
-   - Legend at bottom
+1. **Slash Notation (Inversions)** ✅
+   - `G/B` → `1/3` (chord/bass format)
+   - `C/E` → `4/6`
+   - `D/F#` → `5/7`
+   - `Am/C` → `2/4`
 
-2. **Manual Entry Live Preview** ✅
-   - Debounced 500ms live preview as user types
-   - Key and Time signature selectors
-   - Section detection ([Verse], [Chorus])
-   - Instant Motesart conversion display
-   - "Apply to Preview" button to confirm
+2. **Quality Markers** ✅
+   - Plain notes (C, D, E): NO marker
+   - Diatonic chords: NO marker (even minor/dim)
+   - Explicit major (Amaj, AM): 'M' if non-diatonic
+   - Non-diatonic minor: 'm'
 
-3. **Export Matches Visual Preview** ✅
-   - PDF export with Lead Sheet format
-   - Text export with sections and lyrics
-   - Scale reference box in exports
-   - Progression summaries included
+3. **Half-Numbers** ✅
+   - All 12 chromatic notes map correctly
+   - C C# D Eb E F F# G Ab A Bb B → 1 1½ 2 2½ 3 4 4½ 5 5½ 6 6½ 7
+   - No sharp/flat symbols in output
 
-4. **Basic Staff View (Phase 1)** ✅
-   - 5-line staff with treble clef
-   - Chord numbers above staff
-   - Note positions on staff lines
-   - Section labels rendered
-   - Bar lines and double bar at end
+**Phase 2 Planned:**
+- Audiveris OMR integration for Staff View
+- Every note from original sheet music displayed
+- Motesart numbers on note heads
+- Lyrics below staff
 
 ## Application Routes
 - `/` - Landing page
