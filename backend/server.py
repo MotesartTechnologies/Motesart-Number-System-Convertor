@@ -647,6 +647,10 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
     # Plain notes (like "C", "F#", "Bb") should just show the number without quality inference
     is_plain_note = quality_str.strip() == "" and bass_note is None
     
+    # Check if this is an EXPLICIT major chord (like "Cmaj", "GM", "Amaj")
+    # These should get 'M' marker if non-diatonic, unlike plain notes
+    is_explicit_major = False
+    
     # Determine the actual chord quality from input
     is_minor = False
     is_diminished = False
@@ -659,7 +663,18 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
     has_11 = False
     has_13 = False
     
-    # Check for minor first (before other processing)
+    # Check for explicit major FIRST (before minor check, since 'maj' starts with 'm')
+    if quality_str.lower().startswith('maj') and not quality_str.lower().startswith('maj7'):
+        is_explicit_major = True
+        quality_str = re.sub(r'^maj', '', quality_str, flags=re.IGNORECASE)
+    elif quality_str == 'M' or quality_str.startswith('M') and not quality_str.startswith('M7'):
+        is_explicit_major = True
+        if quality_str == 'M':
+            quality_str = ''
+        elif quality_str.startswith('M'):
+            quality_str = quality_str[1:]
+    
+    # Check for minor (after explicit major check)
     if quality_str.startswith('m') and not quality_str.startswith('maj'):
         is_minor = True
         quality_str = quality_str[1:]
