@@ -118,6 +118,166 @@ def pitch_to_motesart(pitch_name: str, key_root_semitone: int) -> str:
     return "?"
 
 
+async def analyze_with_gemini(image_path: str, key_hint: str = None) -> Dict:
+    """
+    Use Gemini AI to analyze sheet music image and extract note information.
+    
+    Args:
+        image_path: Path to the image file
+        key_hint: Optional hint about the key signature
+        
+    Returns:
+        Dictionary with extracted musical data
+    """
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType
+        import json
+        import re
+        
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            logger.error("EMERGENT_LLM_KEY not found in environment")
+            return {'success': False, 'error': 'API key not configured'}
+        
+        logger.info(f"Analyzing image with Gemini: {image_path}")
+        
+        # Determine MIME type
+        ext = os.path.splitext(image_path)[1].lower()
+        mime_map = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.webp': 'image/webp',
+        }
+        mime_type = mime_map.get(ext, 'image/png')
+        
+        # Create the chat instance with Gemini
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"omr_{os.path.basename(image_path)}",
+            system_message="""You are an expert music notation analyst. 
+Your task is to analyze sheet music images and extract detailed note information.
+You MUST respond with valid JSON only - no markdown, no explanations, just pure JSON."""
+        ).with_model("gemini", "gemini-2.5-flash")
+        
+        # Create image content
+        image_content = FileContentWithMimeType(
+            file_path=image_path,
+            mime_type=mime_type
+        )
+        
+        # Build the prompt
+        key_context = f"The key signature appears to be {key_hint}." if key_hint else ""
+        
+        prompt = f"""Analyze this sheet music image carefully and extract ALL musical information.
+{key_context}
+
+Return a JSON object with this EXACT structure:
+{{
+    "key_signature": "the detected key (e.g., 'Db major', 'G major', 'C major')",
+    "key_fifths": number of sharps (positive) or flats (negative) in the key signature,
+    "time_signature": "4/4" or detected time signature,
+    "title": "title if visible, or null",
+    "tempo": tempo marking if visible or null,
+    "notes": [
+        {{
+            "pitch": "note name with octave (e.g., 'C4', 'Db5', 'F#3')",
+            "duration": "quarter", "half", "whole", "eighth", or "sixteenth",
+            "measure": measure number (1-based),
+            "beat": beat position in measure (1-based),
+            "lyric": "any lyrics under this note or null"
+        }}
+    ],
+    "chords": [
+        {{
+            "symbol": "chord symbol if any (e.g., 'Db', 'Fm7', 'Bbm')",
+            "measure": measure number,
+            "beat": beat position
+        }}
+    ],
+    "lyrics_lines": ["array of lyric text lines if present"]
+}}
+
+IMPORTANT:
+1. Extract EVERY visible note from the staff, not just a summary
+2. Use proper enharmonic spelling based on the key (use flats for flat keys, sharps for sharp keys)
+3. For a 5-flat key signature (Db major), notes should be: Db, Eb, F, Gb, Ab, Bb, C
+4. Include all parts/voices if there are multiple staves
+5. Return ONLY the JSON object, no other text"""
+
+        # Send message with image
+        message = UserMessage(
+            text=prompt,
+            file_contents=[image_content]
+        )
+        
+        response = await chat.send_message(message)
+        logger.info(f"Gemini response length: {len(response)}")
+        
+        # Parse the JSON response
+        try:
+            # Try to extract JSON from the response
+            json_match = re.search(r'\{[\s\S]*\}', response)
+            if json_match:
+                data = json.loads(json_match.group())
+            else:
+                data = json.loads(response)
+            
+            logger.info(f"Parsed {len(data.get('notes', []))} notes from Gemini response")
+            
+            # Process notes to add Motesart numbers
+            key_name = data.get('key_signature', 'C major').replace(' major', '').replace(' minor', '')
+            key_root = get_key_root_semitone(key_name)
+            
+            for note in data.get('notes', []):
+                pitch = note.get('pitch', '')
+                note['motesart'] = pitch_to_motesart(pitch, key_root)
+            
+            # Process chords similarly
+            for chord in data.get('chords', []):
+                symbol = chord.get('symbol', '')
+                if symbol:
+                    # Get chord root
+                    root_match = re.match(r'^([A-G][#b]?)', symbol)
+                    if root_match:
+                        chord['motesart'] = pitch_to_motesart(root_match.group(1), key_root)
+            
+            data['success'] = True
+            data['key_root_semitone'] = key_root
+            data['analysis_method'] = 'gemini'
+            
+            return data
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Gemini response as JSON: {e}")
+            logger.error(f"Response was: {response[:500]}")
+            return {
+                'success': False,
+                'error': f'Invalid JSON response from Gemini: {str(e)}',
+                'raw_response': response[:1000]
+            }
+            
+    except Exception as e:
+        logger.error(f"Gemini analysis failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+def analyze_with_gemini_sync(image_path: str, key_hint: str = None) -> Dict:
+    """Synchronous wrapper for analyze_with_gemini."""
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    return loop.run_until_complete(analyze_with_gemini(image_path, key_hint))
+
+
 def process_image_with_oemer(image_path: str) -> Optional[str]:
     """
     Process an image file with OMR to get MusicXML.
