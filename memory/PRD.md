@@ -171,13 +171,15 @@ Chromatic note mapping (any key):
 
 ## Files of Reference
 - `/app/backend/server.py` - Backend with all endpoints
+- `/app/backend/omr_service.py` - Gemini-based OMR service
 - `/app/frontend/src/pages/Dashboard.jsx` - File upload dashboard with live preview
 - `/app/frontend/src/pages/ConverterPage.jsx` - Text converter
 - `/app/frontend/src/components/LeadSheetView.jsx` - Lead sheet format display
-- `/app/frontend/src/components/StaffNotationView.jsx` - Staff notation canvas
+- `/app/frontend/src/components/StaffNotationView.jsx` - Staff notation canvas with OMR notes
 - `/app/frontend/src/components/MotesartPreview.jsx` - Preview container with toolbar
 - `/app/frontend/src/components/Navbar.jsx` - Navigation
 
 ## Known Issues
-- **OMR Pipeline:** Optical Music Recognition for PDF/images still unreliable. Current implementation uses pytesseract which works for chord chart text but not for traditional sheet music notation.
-- **Workaround:** Manual Entry provides reliable chord input and live preview functionality.
+- **OMR Accuracy:** Gemini-based OMR provides reasonable note extraction but may not capture every note perfectly. For critical accuracy, use Manual Entry.
+- **PDF Multi-page:** Currently only processes first page of PDF files.
+- **Lyrics:** Gemini extracts lyrics but they're not yet rendered under the staff.
