@@ -1863,24 +1863,36 @@ async def get_conversion_file(conversion_id: str, user: User = Depends(get_curre
     if not conversion:
         raise HTTPException(status_code=404, detail="Conversion not found")
     
-    if not conversion.get("file_data"):
+    import base64
+    file_data = None
+    
+    # Try to get file from disk first (for large files)
+    if conversion.get("file_path") and os.path.exists(conversion["file_path"]):
+        with open(conversion["file_path"], 'rb') as f:
+            file_data = f.read()
+    # Fall back to base64-encoded data in DB
+    elif conversion.get("file_data"):
+        file_data = base64.b64decode(conversion["file_data"])
+    
+    if not file_data:
         raise HTTPException(status_code=404, detail="No file data available")
     
-    import base64
-    file_data = base64.b64decode(conversion["file_data"])
     file_type = conversion.get("file_type", "pdf")
     
     media_types = {
         "pdf": "application/pdf",
         "png": "image/png",
         "jpg": "image/jpeg",
-        "jpeg": "image/jpeg"
+        "jpeg": "image/jpeg",
+        "heic": "image/heic",
+        "webp": "image/webp"
     }
     
     return StreamingResponse(
         io.BytesIO(file_data),
         media_type=media_types.get(file_type, "application/octet-stream"),
         headers={"Content-Disposition": f"inline; filename={conversion.get('filename', 'file')}"}
+    )
     )
 
 @api_router.get("/conversions")
