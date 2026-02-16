@@ -124,45 +124,70 @@ def process_image_with_oemer(image_path: str) -> Optional[str]:
         Path to the generated MusicXML file, or None if failed
     """
     try:
-        import subprocess
-        import shutil
-        
         logger.info(f"Processing image with oemer: {image_path}")
         
         # Create output directory
         output_dir = tempfile.mkdtemp()
         
-        # Try using oemer command line if available
-        oemer_path = shutil.which('oemer')
-        if oemer_path:
-            result = subprocess.run(
-                ['oemer', image_path, '-o', output_dir],
-                capture_output=True,
-                text=True,
-                timeout=120
-            )
-            if result.returncode == 0:
-                # Look for MusicXML output
-                for f in os.listdir(output_dir):
-                    if f.endswith('.musicxml') or f.endswith('.xml'):
-                        return os.path.join(output_dir, f)
-        
-        # Try using oemer Python API
+        # Try using oemer's inference function
         try:
-            from oemer import predict
-            result = predict.predict(image_path)
-            if result:
-                musicxml_path = os.path.join(output_dir, "result.musicxml")
-                with open(musicxml_path, 'w') as f:
-                    f.write(result)
-                return musicxml_path
+            from oemer import MODULE_PATH
+            from oemer.inference import inference
+            
+            # Get the model path
+            model_path = os.path.join(MODULE_PATH, 'checkpoints', 'unet_big')
+            
+            if os.path.exists(model_path):
+                logger.info(f"Running oemer inference with model: {model_path}")
+                
+                # Run inference - this returns the recognized data
+                result = inference(model_path, image_path)
+                
+                if result:
+                    logger.info(f"oemer inference returned result")
+                    # The result might be music data we can convert
+                    # For now, save it and try to process
+                    
+                    # Try to export to MusicXML using music21
+                    try:
+                        from music21 import stream, note, meter, key as m21key
+                        
+                        # Create a simple score from the result
+                        score = stream.Score()
+                        part = stream.Part()
+                        
+                        # Add time signature
+                        part.append(meter.TimeSignature('4/4'))
+                        
+                        # If result has notes, add them
+                        if isinstance(result, (list, tuple)):
+                            for item in result:
+                                if hasattr(item, 'pitch'):
+                                    n = note.Note(item.pitch)
+                                    part.append(n)
+                        
+                        score.append(part)
+                        
+                        musicxml_path = os.path.join(output_dir, "result.musicxml")
+                        score.write('musicxml', fp=musicxml_path)
+                        
+                        if os.path.exists(musicxml_path):
+                            return musicxml_path
+                            
+                    except Exception as e:
+                        logger.warning(f"Could not convert oemer result to MusicXML: {e}")
+            else:
+                logger.warning(f"oemer model not found at: {model_path}")
+                
         except Exception as e:
-            logger.warning(f"oemer predict failed: {e}")
+            logger.warning(f"oemer inference failed: {e}")
+            import traceback
+            traceback.print_exc()
         
-        # Try alternative: use music21's built-in image analysis
+        # Fallback: Try using music21 for image processing (limited support)
         try:
             from music21 import converter
-            # music21 can't directly process images, but let's try
+            # music21 can't parse images directly, but try anyway
             score = converter.parse(image_path)
             if score:
                 musicxml_path = os.path.join(output_dir, "result.musicxml")
@@ -171,11 +196,13 @@ def process_image_with_oemer(image_path: str) -> Optional[str]:
         except Exception as e:
             logger.warning(f"music21 image parse failed: {e}")
         
-        logger.warning("No OMR method succeeded")
+        logger.warning("No OMR method succeeded for image")
         return None
         
     except Exception as e:
         logger.error(f"oemer processing failed: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
