@@ -728,6 +728,7 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
     # Determine the quality string for Motesart notation
     # Rule §6: Quality Inference - UPDATED INTERPRETATION
     # - Plain notes (just root, no quality): NO quality marker (e.g., "D" → "2", not "2M")
+    # - Explicit major (e.g., "Gmaj", "AM"): Gets 'M' if non-diatonic
     # - Diatonic chords: NO quality marker (even for minor/diminished)
     # - Non-diatonic chords: show quality marker (m, M, °, ⁺, etc.)
     # - Half-number roots: already indicate non-diatonic, add quality only if explicit
@@ -767,12 +768,17 @@ def parse_chord_symbol(chord_str: str, key_root: int) -> Dict:
         elif is_minor:
             # Diatonic minor: no marker; Non-diatonic minor: 'm'
             quality_symbol = "" if is_chord_diatonic else "m"
+        elif is_explicit_major:
+            # Explicit major (e.g., "Gmaj", "AM") - show 'M' if non-diatonic
+            if root_chromatic:
+                quality_symbol = ""  # Half-number already shows non-diatonic
+            elif not is_chord_diatonic:
+                quality_symbol = "M"
         else:
-            # Major chord
+            # Implied major chord (e.g., just "G" with other context)
             # Diatonic major: no marker; Non-diatonic major: 'M'
             if root_chromatic:
-                # Chromatic root (half-number) - no 'M' needed, half-number already shows non-diatonic
-                quality_symbol = ""
+                quality_symbol = ""  # Half-number already shows non-diatonic
             elif not is_chord_diatonic:
                 quality_symbol = "M"
     
