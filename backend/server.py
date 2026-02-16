@@ -1709,13 +1709,16 @@ async def upload_file(file: UploadFile = File(...), user: User = Depends(get_cur
         )
     
     content = await file.read()
-    file_size = len(content)
+    original_file_size = len(content)
     
     # Convert HEIC to PNG if needed
     original_extension = extension
     if extension in ["heic", "heif"]:
         content = await convert_heic_to_png(content)
         extension = "png"  # Treat as PNG after conversion
+    
+    # Get actual file size after any conversion
+    file_size = len(content)
     
     conversion_id = f"conv_{uuid.uuid4().hex[:12]}"
     
