@@ -115,7 +115,8 @@ def pitch_to_motesart(pitch_name: str, key_root_semitone: int) -> str:
 
 def process_image_with_oemer(image_path: str) -> Optional[str]:
     """
-    Process an image file with oemer OMR to get MusicXML.
+    Process an image file with OMR to get MusicXML.
+    Currently falls back to OCR-based chord extraction since full OMR models are not available.
     
     Args:
         image_path: Path to the image file
@@ -124,83 +125,76 @@ def process_image_with_oemer(image_path: str) -> Optional[str]:
         Path to the generated MusicXML file, or None if failed
     """
     try:
-        logger.info(f"Processing image with oemer: {image_path}")
+        logger.info(f"Processing image for music recognition: {image_path}")
         
         # Create output directory
         output_dir = tempfile.mkdtemp()
         
-        # Try using oemer's inference function
+        # Since full OMR models aren't available, use OCR to extract text/chords
+        # This won't get individual notes but can extract chord symbols and lyrics
+        
         try:
-            from oemer import MODULE_PATH
-            from oemer.inference import inference
+            import pytesseract
+            from PIL import Image
+            import cv2
+            import numpy as np
             
-            # Get the model path
-            model_path = os.path.join(MODULE_PATH, 'checkpoints', 'unet_big')
+            # Load and preprocess image
+            img = cv2.imread(image_path)
+            if img is None:
+                pil_img = Image.open(image_path)
+                img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
             
-            if os.path.exists(model_path):
-                logger.info(f"Running oemer inference with model: {model_path}")
+            # Convert to grayscale
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            
+            # Apply thresholding to improve OCR
+            _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+            
+            # Run OCR
+            text = pytesseract.image_to_string(binary)
+            logger.info(f"OCR extracted text length: {len(text)}")
+            
+            if text.strip():
+                # Try to extract chord symbols from the text
+                import re
+                chord_pattern = r'[A-G][#b]?(?:m|M|maj|min|dim|aug|sus|add|7|9|11|13)*(?:/[A-G][#b]?)?'
+                chords = re.findall(chord_pattern, text)
                 
-                # Run inference - this returns the recognized data
-                result = inference(model_path, image_path)
-                
-                if result:
-                    logger.info(f"oemer inference returned result")
-                    # The result might be music data we can convert
-                    # For now, save it and try to process
+                if chords:
+                    logger.info(f"Extracted {len(chords)} chord symbols from image")
                     
-                    # Try to export to MusicXML using music21
-                    try:
-                        from music21 import stream, note, meter, key as m21key
+                    # Create a simple MusicXML with the chords
+                    from music21 import stream, harmony, meter
+                    
+                    score = stream.Score()
+                    part = stream.Part()
+                    part.append(meter.TimeSignature('4/4'))
+                    
+                    for chord_str in chords[:20]:  # Limit to first 20
+                        try:
+                            h = harmony.ChordSymbol(chord_str)
+                            part.append(h)
+                        except:
+                            pass
+                    
+                    score.append(part)
+                    
+                    musicxml_path = os.path.join(output_dir, "result.musicxml")
+                    score.write('musicxml', fp=musicxml_path)
+                    
+                    if os.path.exists(musicxml_path):
+                        logger.info(f"Created MusicXML with {len(chords)} chord symbols")
+                        return musicxml_path
                         
-                        # Create a simple score from the result
-                        score = stream.Score()
-                        part = stream.Part()
-                        
-                        # Add time signature
-                        part.append(meter.TimeSignature('4/4'))
-                        
-                        # If result has notes, add them
-                        if isinstance(result, (list, tuple)):
-                            for item in result:
-                                if hasattr(item, 'pitch'):
-                                    n = note.Note(item.pitch)
-                                    part.append(n)
-                        
-                        score.append(part)
-                        
-                        musicxml_path = os.path.join(output_dir, "result.musicxml")
-                        score.write('musicxml', fp=musicxml_path)
-                        
-                        if os.path.exists(musicxml_path):
-                            return musicxml_path
-                            
-                    except Exception as e:
-                        logger.warning(f"Could not convert oemer result to MusicXML: {e}")
-            else:
-                logger.warning(f"oemer model not found at: {model_path}")
-                
         except Exception as e:
-            logger.warning(f"oemer inference failed: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.warning(f"OCR-based extraction failed: {e}")
         
-        # Fallback: Try using music21 for image processing (limited support)
-        try:
-            from music21 import converter
-            # music21 can't parse images directly, but try anyway
-            score = converter.parse(image_path)
-            if score:
-                musicxml_path = os.path.join(output_dir, "result.musicxml")
-                score.write('musicxml', fp=musicxml_path)
-                return musicxml_path
-        except Exception as e:
-            logger.warning(f"music21 image parse failed: {e}")
-        
-        logger.warning("No OMR method succeeded for image")
+        logger.warning("No OMR/OCR method succeeded for image")
         return None
         
     except Exception as e:
-        logger.error(f"oemer processing failed: {e}")
+        logger.error(f"Image processing failed: {e}")
         import traceback
         traceback.print_exc()
         return None
