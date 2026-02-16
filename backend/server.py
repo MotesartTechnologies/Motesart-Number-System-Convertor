@@ -1968,8 +1968,16 @@ async def process_conversion_omr(
     
     try:
         import base64
-        file_data = base64.b64decode(conversion["file_data"])
         file_type = conversion.get("file_type", "pdf")
+        
+        # Get file data - try MongoDB first, then disk
+        if conversion.get("file_data"):
+            file_data = base64.b64decode(conversion["file_data"])
+        elif conversion.get("file_path") and os.path.exists(conversion["file_path"]):
+            with open(conversion["file_path"], 'rb') as f:
+                file_data = f.read()
+        else:
+            raise HTTPException(status_code=400, detail="No file data available for OMR processing")
         
         # Save to temp file for OMR processing
         temp_suffix = f".{file_type}"
