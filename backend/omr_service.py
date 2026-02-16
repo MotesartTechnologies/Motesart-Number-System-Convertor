@@ -124,26 +124,54 @@ def process_image_with_oemer(image_path: str) -> Optional[str]:
         Path to the generated MusicXML file, or None if failed
     """
     try:
-        from oemer import MODULE_PATH
-        from oemer.inference import inference
+        import subprocess
+        import shutil
         
         logger.info(f"Processing image with oemer: {image_path}")
         
-        # Run oemer inference
+        # Create output directory
         output_dir = tempfile.mkdtemp()
-        result = inference(image_path, output_dir)
         
-        # Look for MusicXML output
-        musicxml_path = os.path.join(output_dir, "result.musicxml")
-        if os.path.exists(musicxml_path):
-            return musicxml_path
+        # Try using oemer command line if available
+        oemer_path = shutil.which('oemer')
+        if oemer_path:
+            result = subprocess.run(
+                ['oemer', image_path, '-o', output_dir],
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+            if result.returncode == 0:
+                # Look for MusicXML output
+                for f in os.listdir(output_dir):
+                    if f.endswith('.musicxml') or f.endswith('.xml'):
+                        return os.path.join(output_dir, f)
         
-        # Check for other output formats
-        for f in os.listdir(output_dir):
-            if f.endswith('.musicxml') or f.endswith('.xml'):
-                return os.path.join(output_dir, f)
+        # Try using oemer Python API
+        try:
+            from oemer import predict
+            result = predict.predict(image_path)
+            if result:
+                musicxml_path = os.path.join(output_dir, "result.musicxml")
+                with open(musicxml_path, 'w') as f:
+                    f.write(result)
+                return musicxml_path
+        except Exception as e:
+            logger.warning(f"oemer predict failed: {e}")
         
-        logger.warning("No MusicXML output from oemer")
+        # Try alternative: use music21's built-in image analysis
+        try:
+            from music21 import converter
+            # music21 can't directly process images, but let's try
+            score = converter.parse(image_path)
+            if score:
+                musicxml_path = os.path.join(output_dir, "result.musicxml")
+                score.write('musicxml', fp=musicxml_path)
+                return musicxml_path
+        except Exception as e:
+            logger.warning(f"music21 image parse failed: {e}")
+        
+        logger.warning("No OMR method succeeded")
         return None
         
     except Exception as e:
