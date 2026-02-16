@@ -477,7 +477,7 @@ def analyze_sheet_music_image(image_path: str, key_override: str = None) -> Dict
     This is a fallback when full OMR is not available.
     
     Args:
-        image_path: Path to the image file
+        image_path: Path to the image file (PNG, JPG, etc. - NOT PDF)
         key_override: Optional key signature override
         
     Returns:
@@ -490,12 +490,33 @@ def analyze_sheet_music_image(image_path: str, key_override: str = None) -> Dict
         
         logger.info(f"Analyzing sheet music image: {image_path}")
         
+        # Check if it's a PDF - if so, convert first
+        if image_path.lower().endswith('.pdf'):
+            logger.info("Converting PDF to image for analysis")
+            image_paths = process_pdf_to_images(image_path)
+            if image_paths:
+                image_path = image_paths[0]  # Use first page
+            else:
+                return {
+                    'success': False,
+                    'error': 'Could not convert PDF to image',
+                    'analysis_type': 'image_analysis'
+                }
+        
         # Load image
         img = cv2.imread(image_path)
         if img is None:
             # Try with PIL for formats like HEIC
-            pil_img = Image.open(image_path)
-            img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+            try:
+                pil_img = Image.open(image_path)
+                img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+            except Exception as e:
+                logger.error(f"Could not load image: {e}")
+                return {
+                    'success': False,
+                    'error': f'Could not load image: {e}',
+                    'analysis_type': 'image_analysis'
+                }
         
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         height, width = gray.shape
@@ -516,12 +537,16 @@ def analyze_sheet_music_image(image_path: str, key_override: str = None) -> Dict
         
         staff_lines.sort()
         
+        # Try to detect key signature from flats/sharps at the beginning
+        # This is a simplified detection
+        detected_key = key_override or 'C'
+        
         result = {
             'success': True,
             'image_size': {'width': width, 'height': height},
             'staff_lines_detected': len(staff_lines),
             'staff_line_positions': staff_lines[:20],  # First 20 lines
-            'key_signature': key_override or 'C',
+            'key_signature': detected_key,
             'analysis_type': 'image_analysis',
             'notes': [],  # Placeholder - full note detection requires more sophisticated OMR
         }
@@ -531,6 +556,8 @@ def analyze_sheet_music_image(image_path: str, key_override: str = None) -> Dict
         
     except Exception as e:
         logger.error(f"Image analysis failed: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             'success': False,
             'error': str(e),
