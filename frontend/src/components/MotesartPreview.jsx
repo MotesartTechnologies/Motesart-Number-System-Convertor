@@ -260,6 +260,30 @@ export function MotesartPreview({
           Print Mode
         </Button>
 
+        {/* OMR Process Button */}
+        {viewMode === "staff" && conversionId && omrNotes.length === 0 && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleProcessOMR}
+            disabled={isProcessingOMR}
+            className="bg-amber-600 hover:bg-amber-500"
+            title="Extract notes from sheet music using OMR"
+          >
+            {isProcessingOMR ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4 mr-1" />
+                Process OMR
+              </>
+            )}
+          </Button>
+        )}
+
         <div className="flex-1" />
 
         {/* Export Buttons */}
