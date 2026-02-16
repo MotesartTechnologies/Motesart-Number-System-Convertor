@@ -1893,7 +1893,6 @@ async def get_conversion_file(conversion_id: str, user: User = Depends(get_curre
         media_type=media_types.get(file_type, "application/octet-stream"),
         headers={"Content-Disposition": f"inline; filename={conversion.get('filename', 'file')}"}
     )
-    )
 
 @api_router.get("/conversions")
 async def get_conversions(user: User = Depends(get_current_user)):
