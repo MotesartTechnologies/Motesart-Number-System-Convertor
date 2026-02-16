@@ -127,6 +127,10 @@ export default function Dashboard({ user }) {
   const [isExplaining, setIsExplaining] = useState(false);
   const [showOriginalPreview, setShowOriginalPreview] = useState(false);
   
+  // Manual staff note entry state
+  const [manualStaffNotes, setManualStaffNotes] = useState([]);
+  const [showNoteEntry, setShowNoteEntry] = useState(false);
+  
   // Manual Entry state
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualChords, setManualChords] = useState("");
