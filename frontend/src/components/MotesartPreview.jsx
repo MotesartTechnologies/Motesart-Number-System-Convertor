@@ -243,10 +243,10 @@ export function MotesartPreview({
           size="sm"
           onClick={() => setShowOriginalChords(!showOriginalChords)}
           className={showOriginalChords ? "bg-slate-700" : ""}
-          title="Show original chord letters"
+          title="Show original chord letters alongside Motesart numbers"
         >
           <Eye className="w-4 h-4 mr-1" />
-          Original
+          Show Chords
         </Button>
 
         <Button
