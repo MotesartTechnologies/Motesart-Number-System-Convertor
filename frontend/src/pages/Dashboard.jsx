@@ -760,14 +760,16 @@ export default function Dashboard({ user }) {
                    manualConversionResult?.all_chords?.length > 0 ||
                    livePreviewResult?.sections?.length > 0 ||
                    selectedConversion?.sections?.length > 0 || 
-                   selectedConversion?.chords?.length > 0) ? (
+                   selectedConversion?.chords?.length > 0 ||
+                   selectedConversion?.omr_notes?.length > 0) ? (
                 <MotesartPreview
                   songData={{
                     title: selectedConversion?.title || selectedConversion?.filename?.split('.')[0] || 'Untitled',
                     artist: selectedConversion?.artist,
                     sections: manualConversionResult?.sections || livePreviewResult?.sections || selectedConversion?.sections || [],
                     all_chords: manualConversionResult?.all_chords || livePreviewResult?.all_chords || selectedConversion?.chords || [],
-                    measures: [],
+                    measures: selectedConversion?.omr_measures || [],
+                    notes: selectedConversion?.omr_notes || [],
                   }}
                   conversionId={selectedConversion?.conversion_id}
                   keySignature={
@@ -779,6 +781,16 @@ export default function Dashboard({ user }) {
                   }
                   timeSignature={selectedConversion?.time_signature || "4/4"}
                   isStaffNotation={selectedConversion?.is_sheet_music && selectedConversion?.file_type === 'pdf'}
+                  omrNotes={selectedConversion?.omr_notes || []}
+                  omrMeasures={selectedConversion?.omr_measures || []}
+                  omrLyrics={selectedConversion?.omr_lyrics || []}
+                  onOMRProcessed={(result) => {
+                    // Refresh conversion data after OMR processing
+                    setSelectedConversion(prev => ({
+                      ...prev,
+                      ...result,
+                    }));
+                  }}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center h-[450px] text-center px-6">
