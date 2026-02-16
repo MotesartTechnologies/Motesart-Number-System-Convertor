@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/select";
 import { Navbar } from "@/components/Navbar";
 import { MotesartPreview } from "@/components/MotesartPreview";
+import { ManualNoteEntry } from "@/components/ManualNoteEntry";
 import { toast } from "sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
