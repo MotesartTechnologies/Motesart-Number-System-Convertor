@@ -1,13 +1,18 @@
 """
 Optical Music Recognition (OMR) Service for Motesart Converter
-Uses oemer for image-based OMR and music21 for MusicXML parsing
+Uses Gemini AI for image-based OMR and music21 for MusicXML parsing
 """
 
 import os
 import tempfile
 import logging
+import base64
+import asyncio
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
