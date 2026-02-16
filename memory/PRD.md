@@ -134,22 +134,24 @@ Chromatic note mapping (any key):
 - [x] Manual Entry with live preview
 - [x] Export matches visual preview
 - [x] Basic Staff View (Phase 1)
+- [x] Chromatic note handling with half-numbers (no sharps/flats)
+- [x] Slash notation (inversions) working
+- [x] Quality markers fixed (diatonic = no marker)
 
-### P1 (Next)
-- [ ] Try Audiveris or music21 for improved OMR
+### P1 (In Progress - Phase 2)
+- [x] OMR infrastructure created (oemer, music21, omr_service.py)
+- [x] File upload saves to disk for large files
+- [x] OMR endpoint `/api/conversions/{id}/omr` created
+- [x] Manual Note Entry component for Staff View
+- [ ] Audiveris deep learning OMR (requires specialized models)
 - [ ] Enhanced Staff View with rhythmic notation
-- [ ] Save chat history per conversion
 
-### P2 (Phase 2)
-- [ ] Full OMR integration (Audiveris) for staff notation
+### P2 (Phase 2 - Deferred)
+- [ ] Full Audiveris integration for accurate note extraction
+- [ ] Per-note rendering on staff with correct positions
 - [ ] Hymnal SATB analysis
 - [ ] Airtable integration
 - [ ] Leaderboard page
-
-### P3 (Future)
-- [ ] Roman numeral side-by-side view
-- [ ] Real-time playback
-- [ ] Collaborative features
 
 ## Files of Reference
 - `/app/backend/server.py` - Backend with all endpoints
