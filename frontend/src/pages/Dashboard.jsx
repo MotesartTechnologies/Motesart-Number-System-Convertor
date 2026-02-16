@@ -789,6 +789,8 @@ export default function Dashboard({ user }) {
                   omrNotes={manualStaffNotes.length > 0 ? manualStaffNotes : (selectedConversion?.omr_notes || [])}
                   omrMeasures={selectedConversion?.omr_measures || []}
                   omrLyrics={selectedConversion?.omr_lyrics || []}
+                  fileType={selectedConversion?.file_type}
+                  onShowOriginal={() => setShowOriginalPreview(!showOriginalPreview)}
                   onOMRProcessed={(result) => {
                     // Refresh conversion data after OMR processing
                     setSelectedConversion(prev => ({
