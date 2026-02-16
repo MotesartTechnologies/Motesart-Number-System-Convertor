@@ -12,12 +12,30 @@ import os
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
+
+@pytest.fixture(scope="module")
+def auth_session():
+    """Create authenticated session for all tests"""
+    session = requests.Session()
+    
+    # Login to get session cookie
+    login_response = session.post(f"{BASE_URL}/api/auth/login", json={
+        "email": "test@example.com",
+        "password": "Test123!"
+    })
+    
+    if login_response.status_code != 200:
+        pytest.skip(f"Login failed with status {login_response.status_code}")
+    
+    return session
+
+
 class TestMinorChordMarkers:
     """Bug 1: ALL minor chords (diatonic or not) should have 'm' marker"""
     
-    def test_diatonic_minor_chord_Am_in_C(self):
+    def test_diatonic_minor_chord_Am_in_C(self, auth_session):
         """Am in key of C should be 6m (not just 6)"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "Am",
             "key": "C"
         })
@@ -32,9 +50,9 @@ class TestMinorChordMarkers:
         assert am_chord['symbol'] == '6m', f"Am in C should be '6m', got '{am_chord['symbol']}'"
         assert am_chord['is_minor'] == True, "Am should be marked as minor"
     
-    def test_diatonic_minor_chord_Em_in_C(self):
+    def test_diatonic_minor_chord_Em_in_C(self, auth_session):
         """Em in key of C should be 3m (not just 3)"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "Em",
             "key": "C"
         })
@@ -47,9 +65,9 @@ class TestMinorChordMarkers:
         em_chord = all_chords[0]
         assert em_chord['symbol'] == '3m', f"Em in C should be '3m', got '{em_chord['symbol']}'"
     
-    def test_diatonic_minor_chord_Dm_in_C(self):
+    def test_diatonic_minor_chord_Dm_in_C(self, auth_session):
         """Dm in key of C should be 2m (not just 2)"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "Dm",
             "key": "C"
         })
@@ -62,9 +80,9 @@ class TestMinorChordMarkers:
         dm_chord = all_chords[0]
         assert dm_chord['symbol'] == '2m', f"Dm in C should be '2m', got '{dm_chord['symbol']}'"
     
-    def test_non_diatonic_minor_chord_Fm_in_C(self):
+    def test_non_diatonic_minor_chord_Fm_in_C(self, auth_session):
         """Fm in key of C should be 4m (non-diatonic minor)"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "Fm",
             "key": "C"
         })
@@ -77,9 +95,9 @@ class TestMinorChordMarkers:
         fm_chord = all_chords[0]
         assert fm_chord['symbol'] == '4m', f"Fm in C should be '4m', got '{fm_chord['symbol']}'"
     
-    def test_minor_seventh_chord_Am7_in_C(self):
+    def test_minor_seventh_chord_Am7_in_C(self, auth_session):
         """Am7 in key of C should be 6m⁷"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "Am7",
             "key": "C"
         })
@@ -93,9 +111,9 @@ class TestMinorChordMarkers:
         assert 'm' in am7_chord['symbol'], f"Am7 should have 'm' marker, got '{am7_chord['symbol']}'"
         assert '⁷' in am7_chord['symbol'], f"Am7 should have '⁷' extension, got '{am7_chord['symbol']}'"
     
-    def test_multiple_minor_chords_in_progression(self):
+    def test_multiple_minor_chords_in_progression(self, auth_session):
         """Test multiple minor chords in a progression"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "Am Em Dm Am",
             "key": "C"
         })
@@ -113,9 +131,9 @@ class TestMinorChordMarkers:
 class TestSlashChordNotation:
     """Bug 2: Slash chord notation - format should be bass/chord (e.g., G/B in G → 3/1)"""
     
-    def test_slash_chord_G_over_B_in_G(self):
+    def test_slash_chord_G_over_B_in_G(self, auth_session):
         """G/B in key of G should be 3/1 (bass first, chord second)"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "G/B",
             "key": "G"
         })
@@ -130,9 +148,9 @@ class TestSlashChordNotation:
         # Format should be bass/chord = 3/1
         assert slash_chord['symbol'] == '3/1', f"G/B in G should be '3/1', got '{slash_chord['symbol']}'"
     
-    def test_slash_chord_C_over_E_in_C(self):
+    def test_slash_chord_C_over_E_in_C(self, auth_session):
         """C/E in key of C should be 3/1 (E is bass, C is chord)"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "C/E",
             "key": "C"
         })
@@ -146,9 +164,9 @@ class TestSlashChordNotation:
         # E is the 3rd degree in C, C is the 1st degree
         assert slash_chord['symbol'] == '3/1', f"C/E in C should be '3/1', got '{slash_chord['symbol']}'"
     
-    def test_slash_chord_Am_over_G_in_C(self):
+    def test_slash_chord_Am_over_G_in_C(self, auth_session):
         """Am/G in key of C should be 5/6m (G is bass, Am is chord)"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "Am/G",
             "key": "C"
         })
@@ -164,9 +182,9 @@ class TestSlashChordNotation:
         assert '5/' in slash_chord['symbol'], f"Am/G should have bass 5, got '{slash_chord['symbol']}'"
         assert 'm' in slash_chord['symbol'], f"Am/G should have 'm' for minor, got '{slash_chord['symbol']}'"
     
-    def test_slash_chord_D_over_F_sharp_in_D(self):
+    def test_slash_chord_D_over_F_sharp_in_D(self, auth_session):
         """D/F# in key of D should be 3/1"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "D/F#",
             "key": "D"
         })
@@ -184,9 +202,9 @@ class TestSlashChordNotation:
 class TestChromaticHalfNumbers:
     """Bug 3: Chromatic notes use half-numbers only (1½, 2½, 4½, 5½, 6½) - no sharp/flat symbols"""
     
-    def test_chromatic_note_C_sharp_in_C(self):
+    def test_chromatic_note_C_sharp_in_C(self, auth_session):
         """C# chord in key of C should use 1½ (not #1 or ♯1)"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "C#",
             "key": "C"
         })
@@ -202,9 +220,9 @@ class TestChromaticHalfNumbers:
         assert '#' not in chord['symbol'], f"Should not have # symbol, got '{chord['symbol']}'"
         assert '♯' not in chord['symbol'], f"Should not have ♯ symbol, got '{chord['symbol']}'"
     
-    def test_chromatic_note_D_sharp_in_C(self):
+    def test_chromatic_note_D_sharp_in_C(self, auth_session):
         """D# chord in key of C should use 2½"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "D#",
             "key": "C"
         })
@@ -218,9 +236,9 @@ class TestChromaticHalfNumbers:
         # D# is 3 semitones above C, should be 2½
         assert '2½' in chord['symbol'], f"D# in C should be '2½', got '{chord['symbol']}'"
     
-    def test_chromatic_note_F_sharp_in_C(self):
+    def test_chromatic_note_F_sharp_in_C(self, auth_session):
         """F# chord in key of C should use 4½"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "F#",
             "key": "C"
         })
@@ -234,9 +252,9 @@ class TestChromaticHalfNumbers:
         # F# is 6 semitones above C, should be 4½
         assert '4½' in chord['symbol'], f"F# in C should be '4½', got '{chord['symbol']}'"
     
-    def test_chromatic_note_G_sharp_in_C(self):
+    def test_chromatic_note_G_sharp_in_C(self, auth_session):
         """G# chord in key of C should use 5½"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "G#",
             "key": "C"
         })
@@ -250,9 +268,9 @@ class TestChromaticHalfNumbers:
         # G# is 8 semitones above C, should be 5½
         assert '5½' in chord['symbol'], f"G# in C should be '5½', got '{chord['symbol']}'"
     
-    def test_chromatic_note_A_sharp_in_C(self):
+    def test_chromatic_note_A_sharp_in_C(self, auth_session):
         """A# chord in key of C should use 6½"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "A#",
             "key": "C"
         })
@@ -266,9 +284,9 @@ class TestChromaticHalfNumbers:
         # A# is 10 semitones above C, should be 6½
         assert '6½' in chord['symbol'], f"A# in C should be '6½', got '{chord['symbol']}'"
     
-    def test_chromatic_minor_chord_F_sharp_minor_in_C(self):
+    def test_chromatic_minor_chord_F_sharp_minor_in_C(self, auth_session):
         """F#m chord in key of C should use 4½m"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "F#m",
             "key": "C"
         })
@@ -283,9 +301,9 @@ class TestChromaticHalfNumbers:
         assert '4½' in chord['symbol'], f"F#m in C should have '4½', got '{chord['symbol']}'"
         assert 'm' in chord['symbol'], f"F#m should have 'm' marker, got '{chord['symbol']}'"
     
-    def test_no_flat_symbols_in_output(self):
+    def test_no_flat_symbols_in_output(self, auth_session):
         """Ensure no flat symbols (♭ or b) appear in Motesart output"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": "Bb Eb Ab Db Gb",
             "key": "C"
         })
@@ -303,33 +321,16 @@ class TestChromaticHalfNumbers:
 class TestOMREndpoint:
     """Test OMR endpoint for sheet music image processing"""
     
-    def test_omr_endpoint_exists(self):
+    def test_omr_endpoint_exists(self, auth_session):
         """Verify OMR endpoint exists"""
-        # First login to get session
-        login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "test@example.com",
-            "password": "Test123!"
-        })
-        assert login_response.status_code == 200
-        
-        # Get cookies from login
-        cookies = login_response.cookies
-        
         # Check if we can access conversions
-        conv_response = requests.get(f"{BASE_URL}/api/conversions", cookies=cookies)
+        conv_response = auth_session.get(f"{BASE_URL}/api/conversions")
         assert conv_response.status_code == 200
     
-    def test_conversion_with_omr_data(self):
+    def test_conversion_with_omr_data(self, auth_session):
         """Test that conversion can have OMR data"""
-        # Login first
-        login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "test@example.com",
-            "password": "Test123!"
-        })
-        cookies = login_response.cookies
-        
         # Get conversions
-        conv_response = requests.get(f"{BASE_URL}/api/conversions", cookies=cookies)
+        conv_response = auth_session.get(f"{BASE_URL}/api/conversions")
         assert conv_response.status_code == 200
         
         conversions = conv_response.json()
@@ -347,9 +348,9 @@ class TestOMREndpoint:
 class TestIntegration:
     """Integration tests combining multiple features"""
     
-    def test_full_chord_progression_with_all_features(self):
+    def test_full_chord_progression_with_all_features(self, auth_session):
         """Test a full chord progression with minor chords, slash chords, and chromatic notes"""
-        response = requests.post(f"{BASE_URL}/api/convert/text", json={
+        response = auth_session.post(f"{BASE_URL}/api/convert/text", json={
             "text": """[Verse]
 C Am F G/B
 [Chorus]
