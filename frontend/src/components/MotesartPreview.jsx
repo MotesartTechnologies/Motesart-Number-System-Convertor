@@ -401,6 +401,7 @@ export function MotesartPreview({
             omrNotes={omrNotes}
             omrMeasures={omrMeasures}
             omrLyrics={omrLyrics}
+            omrDisplay={omrDisplay}
             isProcessing={isProcessingOMR}
             onProcessOMR={conversionId ? handleProcessOMR : null}
             onCanvasReady={handleCanvasReady}
