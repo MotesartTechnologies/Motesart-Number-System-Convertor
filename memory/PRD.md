@@ -46,33 +46,43 @@ Build a multi-step "Motesart Number System Converter" app that supports:
    - No sharp (♯) or flat (♭) symbols in output
    - C# → 1½, D#/Eb → 2½, F# → 4½, G#/Ab → 5½, A#/Bb → 6½
 
-### Phase 3 - February 17, 2026 (COMPLETED)
-**Rebuilt OMR Pipeline with Google Gemini Vision API:**
+### Phase 3.1 - February 17, 2026 (COMPLETED)
+**Enhanced OMR with Lyrics Alignment & Multi-page Support:**
 
-1. **Removed Old OMR Systems:**
-   - Removed broken Audiveris, oemer, Tesseract implementations
-   - Cleaned up failed OMR code
+1. **Lyrics Alignment:**
+   - Motesart numbers displayed on one line
+   - Lyrics/words aligned directly below corresponding numbers
+   - Format: | 1  1  5  5 | with lyrics below each note
+   - Uses measure bars (|) to separate measures
 
-2. **New Gemini-based OMR Pipeline:**
-   - Uses Google Gemini Vision API (gemini-2.5-flash) via Emergent LLM key
-   - Converts PDF pages to high-resolution PNG (300 DPI)
-   - Sends images with detailed prompt for note extraction
-   - Parses structured JSON response with measures, notes, lyrics
+2. **Multi-page PDF Support:**
+   - Processes ALL pages in uploaded PDFs
+   - Converts each page to 300 DPI PNG
+   - Sends each page to Gemini individually
+   - Combines all pages into continuous output
+   - Shows page count and failed page warnings
 
-3. **Motesart Conversion:**
-   - Maps notes to numbers: C=1, D=2, E=3, F=4, G=5, A=6, B=7
-   - Half-numbers for chromatic notes (1½, 2½, 4½, 5½, 6½)
-   - Octave dots: • above for higher octaves, • below for lower octaves
+3. **Error Handling:**
+   - Clear error messages for failed pages
+   - "API credits exhausted" message for quota issues
+   - "Could not read page X" for individual page failures
+   - Graceful degradation - continues processing other pages
 
-4. **Display Format:**
-   - Motesart numbers on one line with measure bars (|)
-   - Lyrics aligned below (when extracted)
-   - Legend explaining notation
+4. **Accuracy Verification:**
+   - Original file preview toggle
+   - Side-by-side comparison of original and conversion
+   - Text output expandable section for verification
 
-5. **Supported File Types:**
-   - Scanned PDF hymnals
-   - Image uploads (PNG, JPG, JPEG, WebP)
-   - HEIC conversion supported
+5. **Export Options:**
+   - "Copy Text" button for clipboard export
+   - Text output shows numbers and lyrics aligned
+   - PDF and PNG export buttons in toolbar
+
+6. **API Key Management:**
+   - Users can add their own Gemini API key
+   - Falls back to Emergent LLM key if no user key
+   - API key status shown (masked)
+   - Endpoints: GET/PUT /api/auth/api-keys
 
 ## Application Routes
 - `/` - Landing page
