@@ -2037,7 +2037,7 @@ async def process_conversion_omr(
                 # Recalculate Motesart degrees with new key
                 key_root = get_key_root_semitone(key_name)
                 for note in staff_notes:
-                    note["motesart"] = pitch_to_motesart(note["pitch"], key_root)
+                    note["motesart"] = pitch_to_motesart(note.get("pitch", ""), key_root)
             
             # Update conversion with OMR results
             update_data = {
@@ -2051,8 +2051,10 @@ async def process_conversion_omr(
                 "title": omr_result.get("title") or conversion.get("filename", "").split(".")[0],
                 "omr_notes": staff_notes,
                 "omr_measures": omr_result.get("measures", []),
-                "omr_lyrics": omr_result.get("lyrics", []),
+                "omr_lyrics": omr_result.get("all_lyrics", []),
+                "omr_display": omr_result.get("display"),  # New: formatted display lines
                 "content_type": "traditional",
+                "analysis_method": omr_result.get("analysis_method", "gemini-2.0-flash"),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
             
