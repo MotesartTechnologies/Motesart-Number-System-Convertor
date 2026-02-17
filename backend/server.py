@@ -2721,7 +2721,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_origins=[
         "http://localhost:3000",
-        "https://motesart-converter.preview.emergentagent.com",
+        "https://chord-converter.preview.emergentagent.com",
         "https://*.emergentagent.com",
     ],
     allow_methods=["*"],

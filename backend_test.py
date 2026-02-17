@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 class MotesartAPITester:
-    def __init__(self, base_url="https://motesart-converter.preview.emergentagent.com"):
+    def __init__(self, base_url="https://chord-converter.preview.emergentagent.com"):
         self.base_url = base_url
         self.session = requests.Session()  # Use session to handle cookies
         self.user_id = None
