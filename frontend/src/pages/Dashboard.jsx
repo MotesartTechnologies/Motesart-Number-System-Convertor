@@ -775,6 +775,9 @@ export default function Dashboard({ user }) {
                     all_chords: manualConversionResult?.all_chords || livePreviewResult?.all_chords || selectedConversion?.chords || [],
                     measures: selectedConversion?.omr_measures || [],
                     notes: selectedConversion?.omr_notes || [],
+                    omr_pages: selectedConversion?.omr_pages || [],
+                    total_pages: selectedConversion?.total_pages || 1,
+                    failed_pages: selectedConversion?.failed_pages || [],
                   }}
                   conversionId={selectedConversion?.conversion_id}
                   keySignature={
