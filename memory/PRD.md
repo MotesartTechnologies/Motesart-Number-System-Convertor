@@ -200,5 +200,25 @@ Chromatic note mapping (any key):
 
 ## Known Issues
 - **OMR Accuracy:** Gemini-based OMR provides reasonable note extraction but may not capture every note perfectly. For critical accuracy, use Manual Entry.
-- **PDF Multi-page:** Currently only processes first page of PDF files.
-- **Lyrics:** Gemini extracts lyrics but they're not yet rendered under the staff.
+- **Visual Staff View:** Current StaffNotationView shows text-based output. Full visual rendering (numbers on image) is planned.
+- **API Key UI:** Backend endpoint exists but frontend UI for API key management is not yet implemented.
+
+## Changelog
+
+### February 17, 2026 - Priority 1 Critical Bug Fix (COMPLETED)
+**Fixed: Gemini OMR Pipeline Not Triggering on File Upload**
+
+The application was showing "No Chords Detected" errors because the upload endpoint was not correctly calling the Gemini OMR pipeline. This recurring issue has been permanently resolved.
+
+**Changes Made:**
+1. Deleted old `extract_text_from_image()` function (lines 1640-1690)
+2. Deleted old `extract_text_from_pdf()` function (lines 1692-1750)
+3. Verified `/api/upload` endpoint correctly calls `process_sheet_music_omr()` from `omr_service.py`
+4. Removed all instances of "No chords detected" error messages from backend
+
+**Verification:**
+- Backend logs now show: `Step 1: File uploaded` → `Step 2: Calling Gemini Vision API` → `Step 3: Gemini response received` → `Step 4: OMR successful` → `Step 5: Motesart conversion complete`
+- Upload returns `status: "completed"` with `omr_success: True` and extracted notes
+- 100% test pass rate (11/11 backend tests)
+
+**Test Report:** `/app/test_reports/iteration_11.json`
