@@ -1,41 +1,23 @@
 import { useRef, useEffect, useState } from "react";
 import { Button } from "../components/ui/button";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Download, Copy, Check, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 // Staff configuration
 const STAFF_CONFIG = {
-  lineSpacing: 10,
-  noteSize: 14,
-  measureWidth: 140,
-  staffMarginTop: 100,
-  leftMargin: 60,
-  rightMargin: 30,
-  systemSpacing: 140,
+  noteWidth: 50,
+  lineHeight: 70,
+  measurePadding: 15,
   colors: {
-    staffLines: '#555555',
     numbers: '#fbbf24',
     lyrics: '#9ca3af',
-    barLines: '#666666',
+    barLines: '#555555',
     background: '#0a0a1a',
     backgroundPrint: '#ffffff',
-    textPrint: '#1f2937',
     title: '#a78bfa',
+    pageLabel: '#6366f1',
+    error: '#ef4444',
   }
-};
-
-// MIDI pitch to staff position (relative to middle C = 60)
-const midiToStaffPosition = (midi) => {
-  const notePositions = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6];
-  const noteInOctave = midi % 12;
-  const octave = Math.floor(midi / 12) - 4;
-  const basePosition = notePositions[noteInOctave];
-  return basePosition + (octave * 7);
-};
-
-// Staff position to Y coordinate
-const staffPositionToY = (position, staffTopY, lineSpacing) => {
-  const middleLine = staffTopY + (lineSpacing * 2);
-  return middleLine - (position * (lineSpacing / 2));
 };
 
 export function StaffNotationView({ 
@@ -49,12 +31,53 @@ export function StaffNotationView({
   omrMeasures = [],
   omrLyrics = [],
   omrDisplay = null,
+  omrPages = [],
+  totalPages = 1,
+  failedPages = [],
   isProcessing = false,
   onProcessOMR = null,
   onCanvasReady = null,
+  onExportPDF = null,
 }) {
   const canvasRef = useRef(null);
-  const containerRef = useRef(null);
+  const [copied, setCopied] = useState(false);
+
+  // Generate text output for clipboard
+  const generateTextOutput = () => {
+    if (!omrDisplay) return '';
+    
+    const lines = [];
+    const numberLines = omrDisplay.number_lines || [];
+    const lyricLines = omrDisplay.lyric_lines || [];
+    
+    for (let i = 0; i < numberLines.length; i++) {
+      lines.push(numberLines[i]);
+      if (lyricLines[i]) {
+        lines.push(lyricLines[i]);
+      }
+      lines.push(''); // Empty line between rows
+    }
+    
+    return lines.join('\n');
+  };
+
+  // Copy to clipboard handler
+  const handleCopyToClipboard = async () => {
+    const text = generateTextOutput();
+    if (!text) {
+      toast.error("No content to copy");
+      return;
+    }
+    
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success("Copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error("Failed to copy");
+    }
+  };
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -62,25 +85,24 @@ export function StaffNotationView({
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     
-    // Colors based on print mode
     const bgColor = printMode ? STAFF_CONFIG.colors.backgroundPrint : STAFF_CONFIG.colors.background;
-    const textColor = printMode ? STAFF_CONFIG.colors.textPrint : '#ffffff';
+    const textColor = printMode ? '#1f2937' : '#ffffff';
     const numberColor = printMode ? '#b45309' : STAFF_CONFIG.colors.numbers;
     const lyricColor = printMode ? '#4b5563' : STAFF_CONFIG.colors.lyrics;
-    const lineColor = printMode ? '#374151' : STAFF_CONFIG.colors.staffLines;
     const titleColor = printMode ? '#7c3aed' : STAFF_CONFIG.colors.title;
+    const barColor = printMode ? '#374151' : STAFF_CONFIG.colors.barLines;
 
-    const notes = omrNotes.length > 0 ? omrNotes : (songData?.notes || []);
-    const measures = omrMeasures.length > 0 ? omrMeasures : (songData?.measures || []);
     const title = songData?.title || 'Untitled';
+    const measures = omrMeasures.length > 0 ? omrMeasures : (songData?.measures || []);
+    const notes = omrNotes.length > 0 ? omrNotes : (songData?.notes || []);
     
-    // Calculate canvas dimensions based on content
-    const measuresPerLine = 4;
-    const totalMeasures = measures.length || Math.ceil(notes.length / 4) || 4;
-    const numSystems = Math.ceil(totalMeasures / measuresPerLine);
+    // Calculate canvas dimensions
+    const notesPerLine = 16;
+    const totalNotes = notes.length || measures.reduce((sum, m) => sum + (m.notes?.length || 0), 0);
+    const numLines = Math.max(1, Math.ceil(totalNotes / notesPerLine));
     
-    const canvasWidth = 800 * zoom;
-    const canvasHeight = Math.max(500, (numSystems * STAFF_CONFIG.systemSpacing + 180)) * zoom;
+    const canvasWidth = Math.max(800, notesPerLine * STAFF_CONFIG.noteWidth + 100) * zoom;
+    const canvasHeight = Math.max(400, (numLines * STAFF_CONFIG.lineHeight * 2 + 200)) * zoom;
     
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
@@ -94,23 +116,37 @@ export function StaffNotationView({
     // Draw header
     ctx.fillStyle = titleColor;
     ctx.font = 'bold 24px Georgia, serif';
-    ctx.fillText(title, STAFF_CONFIG.leftMargin, 35);
+    ctx.fillText(title, 40, 40);
 
     // Key and time signature
     ctx.fillStyle = numberColor;
     ctx.font = 'bold 16px monospace';
-    ctx.fillText(`1 = ${keySignature || 'C'}`, STAFF_CONFIG.leftMargin, 58);
+    ctx.fillText(`1 = ${keySignature || 'C'}`, 40, 65);
     
     ctx.fillStyle = textColor;
     ctx.font = '14px monospace';
-    ctx.fillText(`Time: ${timeSignature}`, STAFF_CONFIG.leftMargin + 100, 58);
+    ctx.fillText(`Time: ${timeSignature}`, 150, 65);
+
+    // Page info if multi-page
+    if (totalPages > 1) {
+      ctx.fillStyle = STAFF_CONFIG.colors.pageLabel;
+      ctx.font = '12px sans-serif';
+      ctx.fillText(`Pages: ${totalPages - failedPages.length}/${totalPages} processed`, 280, 65);
+    }
 
     // Branding
     ctx.fillStyle = lyricColor;
     ctx.font = '10px sans-serif';
-    ctx.fillText('Converted by Motesart Technologies', STAFF_CONFIG.leftMargin, 75);
+    ctx.fillText('Converted by Motesart Technologies', 40, 85);
 
-    // If no notes, show placeholder message
+    // Show failed pages warning
+    if (failedPages.length > 0) {
+      ctx.fillStyle = STAFF_CONFIG.colors.error;
+      ctx.font = '12px sans-serif';
+      ctx.fillText(`⚠ Could not read page(s): ${failedPages.join(', ')}. Try higher quality scans.`, 40, 105);
+    }
+
+    // If no notes, show placeholder
     if (notes.length === 0 && measures.length === 0) {
       ctx.fillStyle = lyricColor;
       ctx.font = '14px sans-serif';
@@ -122,175 +158,151 @@ export function StaffNotationView({
       return;
     }
 
-    // Draw Motesart output with numbers on top and lyrics below
-    let yOffset = STAFF_CONFIG.staffMarginTop;
-    const xStart = STAFF_CONFIG.leftMargin;
-    const noteSpacing = 45;
+    // Draw aligned output: numbers on top, lyrics below
+    let yOffset = failedPages.length > 0 ? 140 : 120;
+    let xOffset = 40;
+    const noteWidth = STAFF_CONFIG.noteWidth;
+    const lineHeight = STAFF_CONFIG.lineHeight;
+    let noteCount = 0;
+    let measureCount = 0;
     
-    // Draw each measure
-    let x = xStart;
-    let measureNum = 0;
+    // Draw measure by measure
+    const allMeasures = measures.length > 0 ? measures : [{notes: notes}];
     
-    for (const measure of measures) {
+    for (const measure of allMeasures) {
       const measureNotes = measure.notes || [];
       
-      // Check if we need to wrap to next line
-      const measureWidth = measureNotes.length * noteSpacing + 30;
-      if (x + measureWidth > (canvasWidth / zoom) - STAFF_CONFIG.rightMargin) {
-        x = xStart;
-        yOffset += STAFF_CONFIG.systemSpacing;
-      }
-      
-      // Draw measure number
-      ctx.fillStyle = lyricColor;
-      ctx.font = '10px sans-serif';
-      ctx.fillText(`${measureNum + 1}`, x, yOffset - 15);
-      
-      // Draw notes in this measure
-      for (const note of measureNotes) {
-        const motesart = note.motesart || note.number || '?';
-        const lyric = note.lyric || '';
-        const dotsAbove = note.dots_above || '';
-        const dotsBelow = note.dots_below || '';
-        
-        // Draw dots above (for higher octaves)
-        if (dotsAbove) {
-          ctx.fillStyle = numberColor;
-          ctx.font = '10px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText(dotsAbove, x + 15, yOffset - 5);
-        }
-        
-        // Draw Motesart number
-        ctx.fillStyle = numberColor;
-        ctx.font = 'bold 20px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText(motesart, x + 15, yOffset + 15);
-        
-        // Draw dots below (for lower octaves)
-        if (dotsBelow) {
-          ctx.fillStyle = numberColor;
-          ctx.font = '10px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText(dotsBelow, x + 15, yOffset + 30);
-        }
-        
-        // Draw lyric below
-        if (lyric) {
-          ctx.fillStyle = lyricColor;
-          ctx.font = '12px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(lyric, x + 15, yOffset + 50);
-        }
-        
-        x += noteSpacing;
-      }
-      
-      // Draw bar line after measure
-      ctx.strokeStyle = STAFF_CONFIG.colors.barLines;
+      // Draw measure start bar
+      ctx.strokeStyle = barColor;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(x + 5, yOffset - 20);
-      ctx.lineTo(x + 5, yOffset + 55);
+      ctx.moveTo(xOffset, yOffset);
+      ctx.lineTo(xOffset, yOffset + lineHeight);
       ctx.stroke();
+      xOffset += 10;
       
-      x += 20;
-      measureNum++;
-    }
-    
-    // If we have notes but no measures, distribute them
-    if (measures.length === 0 && notes.length > 0) {
-      x = xStart;
-      let noteCount = 0;
-      
-      for (const note of notes) {
-        // Wrap every 8 notes or when line is full
-        if (noteCount > 0 && noteCount % 8 === 0) {
-          // Draw bar line
-          ctx.strokeStyle = STAFF_CONFIG.colors.barLines;
+      for (const note of measureNotes) {
+        // Check if we need to wrap to next line
+        if (xOffset + noteWidth > (canvasWidth / zoom) - 40) {
+          xOffset = 40;
+          yOffset += lineHeight * 1.5;
+          
+          // Draw measure continuation bar
+          ctx.strokeStyle = barColor;
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.moveTo(x + 5, yOffset - 20);
-          ctx.lineTo(x + 5, yOffset + 55);
+          ctx.moveTo(xOffset, yOffset);
+          ctx.lineTo(xOffset, yOffset + lineHeight);
           ctx.stroke();
-          
-          x += 20;
+          xOffset += 10;
         }
         
-        if (x + noteSpacing > (canvasWidth / zoom) - STAFF_CONFIG.rightMargin) {
-          x = xStart;
-          yOffset += STAFF_CONFIG.systemSpacing;
-        }
-        
-        const motesart = note.motesart || '?';
+        const motesart = note.motesart || note.number || '-';
         const lyric = note.lyric || '';
         const dotsAbove = note.dots_above || '';
         const dotsBelow = note.dots_below || '';
         
-        // Draw dots above
+        const centerX = xOffset + noteWidth / 2;
+        
+        // Draw dots above (higher octave)
         if (dotsAbove) {
           ctx.fillStyle = numberColor;
-          ctx.font = '10px monospace';
+          ctx.font = '12px monospace';
           ctx.textAlign = 'center';
-          ctx.fillText(dotsAbove, x + 15, yOffset - 5);
+          ctx.fillText(dotsAbove, centerX, yOffset + 5);
         }
         
         // Draw Motesart number
         ctx.fillStyle = numberColor;
-        ctx.font = 'bold 20px monospace';
+        ctx.font = 'bold 24px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(motesart, x + 15, yOffset + 15);
+        ctx.fillText(motesart, centerX, yOffset + 30);
         
-        // Draw dots below
+        // Draw dots below (lower octave)
         if (dotsBelow) {
           ctx.fillStyle = numberColor;
-          ctx.font = '10px monospace';
+          ctx.font = '12px monospace';
           ctx.textAlign = 'center';
-          ctx.fillText(dotsBelow, x + 15, yOffset + 30);
+          ctx.fillText(dotsBelow, centerX, yOffset + 45);
         }
         
-        // Draw lyric
-        if (lyric) {
+        // Draw lyric below - aligned directly under the number
+        if (lyric && lyric !== '-') {
           ctx.fillStyle = lyricColor;
-          ctx.font = '12px sans-serif';
+          ctx.font = '14px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(lyric, x + 15, yOffset + 50);
+          ctx.fillText(lyric, centerX, yOffset + lineHeight - 5);
         }
         
-        x += noteSpacing;
+        xOffset += noteWidth;
         noteCount++;
       }
+      
+      // Draw measure end bar
+      ctx.strokeStyle = barColor;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(xOffset + 5, yOffset);
+      ctx.lineTo(xOffset + 5, yOffset + lineHeight);
+      ctx.stroke();
+      xOffset += STAFF_CONFIG.measurePadding;
+      measureCount++;
     }
 
     // Draw legend
-    const legendY = canvasHeight / zoom - 30;
+    const legendY = canvasHeight / zoom - 35;
     ctx.fillStyle = lyricColor;
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('Numbers = Motesart scale degrees | • above = higher octave | • below = lower octave | ½ = chromatic notes', STAFF_CONFIG.leftMargin, legendY);
+    ctx.fillText('Legend: Numbers = Motesart scale degrees | • = octave indicators | ½ = chromatic notes', 40, legendY);
+    ctx.fillText('Format: | 1  2  3  4 | = one measure with notes | Lyrics aligned below each number', 40, legendY + 15);
 
-    // Notify parent that canvas is ready
     if (onCanvasReady) {
       onCanvasReady(canvas);
     }
 
-  }, [songData, keySignature, timeSignature, printMode, showOriginalChords, zoom, omrNotes, omrMeasures, omrLyrics, onCanvasReady]);
+  }, [songData, keySignature, timeSignature, printMode, showOriginalChords, zoom, omrNotes, omrMeasures, omrLyrics, omrDisplay, totalPages, failedPages, onCanvasReady]);
 
   return (
-    <div ref={containerRef} className="relative w-full" data-testid="staff-notation-view">
+    <div className="relative w-full" data-testid="staff-notation-view">
       {isProcessing && (
         <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center z-10 rounded-lg">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
             <p className="text-sm text-slate-300">Processing sheet music with Gemini AI...</p>
+            <p className="text-xs text-slate-500">This may take a moment for multi-page PDFs</p>
           </div>
         </div>
       )}
       
-      <div className="overflow-auto">
+      {/* Action buttons */}
+      {omrNotes.length > 0 && (
+        <div className="flex gap-2 mb-3 justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyToClipboard}
+            className="border-slate-700 text-xs"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3 h-3 mr-1 text-green-500" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="w-3 h-3 mr-1" />
+                Copy Text
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+      
+      <div className="overflow-auto border border-slate-800 rounded-lg">
         <canvas 
           ref={canvasRef}
-          className="mx-auto rounded-lg"
+          className="mx-auto"
           style={{ 
             maxWidth: '100%',
             height: 'auto',
@@ -298,7 +310,20 @@ export function StaffNotationView({
         />
       </div>
       
-      {/* Process OMR Button - shown when no notes */}
+      {/* Failed pages warning */}
+      {failedPages.length > 0 && (
+        <div className="mt-3 p-3 bg-red-900/20 border border-red-800 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm text-red-300 font-medium">Some pages could not be read</p>
+            <p className="text-xs text-red-400 mt-1">
+              Pages {failedPages.join(', ')} failed. Try uploading higher quality scans.
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {/* Process OMR Button */}
       {omrNotes.length === 0 && onProcessOMR && !isProcessing && (
         <div className="mt-4 text-center">
           <Button
@@ -309,9 +334,23 @@ export function StaffNotationView({
             Process OMR with Gemini AI
           </Button>
           <p className="text-xs text-slate-500 mt-2">
-            Extracts notes and lyrics from scanned sheet music using Google Gemini Vision API
+            Extracts notes and lyrics from scanned sheet music
           </p>
         </div>
+      )}
+      
+      {/* Text output preview (collapsible) */}
+      {omrDisplay && omrDisplay.number_lines?.length > 0 && (
+        <details className="mt-4 border border-slate-700 rounded-lg">
+          <summary className="p-3 cursor-pointer text-sm text-slate-300 hover:bg-slate-800/50">
+            📝 View Text Output (click to expand)
+          </summary>
+          <pre className="p-4 text-xs font-mono text-slate-400 bg-slate-900 overflow-x-auto whitespace-pre">
+{omrDisplay.number_lines.map((numLine, i) => (
+  `${numLine}\n${omrDisplay.lyric_lines[i] || ''}\n\n`
+)).join('')}
+          </pre>
+        </details>
       )}
     </div>
   );
