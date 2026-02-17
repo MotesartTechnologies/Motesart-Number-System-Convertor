@@ -179,8 +179,8 @@ Chromatic note mapping (any key):
 
 ### P1 (In Progress)
 - [ ] Toolbar functionality (Zoom, Print mode)
-- [ ] Multi-page PDF processing for OMR
-- [ ] Lyrics extraction and display under notes
+- [ ] API Key Management UI - frontend for users to enter their own Gemini API key
+- [ ] Visual Staff Notation (Format A) - render Motesart numbers on top of original sheet music image
 
 ### P2 (Future)
 - [ ] Hymnal SATB analysis
