@@ -152,6 +152,7 @@ def image_to_base64(image_path: str) -> str:
 async def analyze_sheet_music_with_gemini(image_path: str) -> Dict:
     """
     Send sheet music image to Google Gemini Vision API for analysis.
+    Uses Emergent LLM key for API access.
     
     Args:
         image_path: Path to the image file
@@ -160,23 +161,14 @@ async def analyze_sheet_music_with_gemini(image_path: str) -> Dict:
         Parsed JSON response with notes, lyrics, key, time signature
     """
     try:
-        import google.generativeai as genai
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType
         
-        if not GEMINI_API_KEY:
-            logger.error("GEMINI_API_KEY not configured")
-            return {'success': False, 'error': 'Gemini API key not configured'}
-        
-        # Configure the API
-        genai.configure(api_key=GEMINI_API_KEY)
-        
-        # Use gemini-2.0-flash model
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            logger.error("EMERGENT_LLM_KEY not configured")
+            return {'success': False, 'error': 'Emergent LLM key not configured'}
         
         logger.info(f"Analyzing sheet music with Gemini: {image_path}")
-        
-        # Read and encode the image
-        with open(image_path, 'rb') as f:
-            image_data = f.read()
         
         # Determine MIME type
         ext = os.path.splitext(image_path)[1].lower()
@@ -186,6 +178,21 @@ async def analyze_sheet_music_with_gemini(image_path: str) -> Dict:
             '.jpeg': 'image/jpeg',
             '.webp': 'image/webp'
         }.get(ext, 'image/png')
+        
+        # Create chat instance using Emergent integrations
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"omr_{os.path.basename(image_path)}",
+            system_message="""You are an expert music notation analyst. 
+Your task is to analyze hymnal sheet music images and extract detailed note information.
+You MUST respond with valid JSON only - no markdown, no explanations, just pure JSON."""
+        ).with_model("gemini", "gemini-2.5-flash")
+        
+        # Create image content
+        image_content = FileContentWithMimeType(
+            file_path=image_path,
+            mime_type=mime_type
+        )
         
         # Create the prompt
         prompt = """Read this hymnal sheet music image. Extract every single music note (pitch and octave), all lyrics/words aligned to their notes, the key signature, and time signature.
@@ -218,30 +225,27 @@ IMPORTANT:
 5. Group notes by measure
 6. Return ONLY valid JSON, no other text"""
 
-        # Create image part for the API
-        image_part = {
-            'mime_type': mime_type,
-            'data': image_data
-        }
+        # Send message with image
+        message = UserMessage(
+            text=prompt,
+            file_contents=[image_content]
+        )
         
-        # Generate content
-        response = model.generate_content([prompt, image_part])
+        response = await chat.send_message(message)
         
-        # Get the response text
-        response_text = response.text
-        logger.info(f"Gemini response length: {len(response_text)}")
+        logger.info(f"Gemini response length: {len(response)}")
         
         # Parse JSON from response
         try:
             # Try to extract JSON from the response
-            json_match = re.search(r'\{[\s\S]*\}', response_text)
+            json_match = re.search(r'\{[\s\S]*\}', response)
             if json_match:
                 data = json.loads(json_match.group())
             else:
-                data = json.loads(response_text)
+                data = json.loads(response)
             
             data['success'] = True
-            data['analysis_method'] = 'gemini-2.0-flash'
+            data['analysis_method'] = 'gemini-2.5-flash'
             
             logger.info(f"Extracted {len(data.get('measures', []))} measures")
             
@@ -249,11 +253,11 @@ IMPORTANT:
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse Gemini response as JSON: {e}")
-            logger.error(f"Response was: {response_text[:500]}")
+            logger.error(f"Response was: {response[:500]}")
             return {
                 'success': False,
                 'error': f'Invalid JSON response: {str(e)}',
-                'raw_response': response_text[:1000]
+                'raw_response': response[:1000]
             }
             
     except Exception as e:
