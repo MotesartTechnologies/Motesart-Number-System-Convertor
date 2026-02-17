@@ -2059,9 +2059,13 @@ async def process_conversion_omr(
                 "omr_notes": staff_notes,
                 "omr_measures": omr_result.get("measures", []),
                 "omr_lyrics": omr_result.get("all_lyrics", []),
-                "omr_display": omr_result.get("display"),  # New: formatted display lines
+                "omr_display": omr_result.get("display"),
+                "omr_pages": omr_result.get("pages", []),
+                "total_pages": omr_result.get("total_pages", 1),
+                "successful_pages": omr_result.get("successful_pages", 1),
+                "failed_pages": omr_result.get("failed_pages", []),
                 "content_type": "traditional",
-                "analysis_method": omr_result.get("analysis_method", "gemini-2.0-flash"),
+                "analysis_method": omr_result.get("analysis_method", "gemini-2.5-flash"),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
             
@@ -2070,7 +2074,7 @@ async def process_conversion_omr(
                 {"$set": update_data}
             )
             
-            logger.info(f"OMR completed for {conversion_id}: {len(staff_notes)} notes extracted")
+            logger.info(f"OMR completed for {conversion_id}: {len(staff_notes)} notes extracted from {omr_result.get('successful_pages', 1)} pages")
             
         else:
             # OMR failed - try image analysis fallback
