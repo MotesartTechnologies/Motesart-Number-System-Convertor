@@ -402,6 +402,9 @@ export function MotesartPreview({
             omrMeasures={omrMeasures}
             omrLyrics={omrLyrics}
             omrDisplay={omrDisplay}
+            omrPages={songData?.omr_pages || []}
+            totalPages={songData?.total_pages || 1}
+            failedPages={songData?.failed_pages || []}
             isProcessing={isProcessingOMR}
             onProcessOMR={conversionId ? handleProcessOMR : null}
             onCanvasReady={handleCanvasReady}
