@@ -1984,6 +1984,12 @@ async def process_conversion_omr(
     if not has_file:
         raise HTTPException(status_code=400, detail="No file data available for OMR processing")
     
+    # Get user's API key if they have one set
+    user_api_key = None
+    user_doc = await db.users.find_one({"user_id": user.user_id})
+    if user_doc:
+        user_api_key = user_doc.get("gemini_api_key")
+    
     # Update status to processing
     await db.conversions.update_one(
         {"conversion_id": conversion_id},
@@ -2017,8 +2023,9 @@ async def process_conversion_omr(
         
         logger.info(f"Processing OMR for {conversion_id}, file type: {file_type}")
         
-        # Run OMR processing
-        omr_result = process_sheet_music_omr(temp_path)
+        # Run OMR processing with optional user API key
+        key_override = request.key_override if request else None
+        omr_result = process_sheet_music_omr(temp_path, key_override, user_api_key)
         
         # Clean up temp file
         try:
