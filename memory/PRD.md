@@ -46,24 +46,33 @@ Build a multi-step "Motesart Number System Converter" app that supports:
    - No sharp (♯) or flat (♭) symbols in output
    - C# → 1½, D#/Eb → 2½, F# → 4½, G#/Ab → 5½, A#/Bb → 6½
 
-### Phase 3 - February 16, 2026 (COMPLETED)
-**Gemini-based OMR Implementation:**
+### Phase 3 - February 17, 2026 (COMPLETED)
+**Rebuilt OMR Pipeline with Google Gemini Vision API:**
 
-1. **Gemini AI Integration** ✅
-   - Uses Gemini 2.5 Flash via Emergent LLM Key
-   - Analyzes sheet music images to extract notes
-   - Detects key signature, time signature, title
+1. **Removed Old OMR Systems:**
+   - Removed broken Audiveris, oemer, Tesseract implementations
+   - Cleaned up failed OMR code
 
-2. **Note Extraction** ✅
-   - Extracts individual notes with pitch, duration
-   - Converts pitches to Motesart degrees
-   - Handles chromatic notes with half-numbers
+2. **New Gemini-based OMR Pipeline:**
+   - Uses Google Gemini Vision API (gemini-2.5-flash) via Emergent LLM key
+   - Converts PDF pages to high-resolution PNG (300 DPI)
+   - Sends images with detailed prompt for note extraction
+   - Parses structured JSON response with measures, notes, lyrics
 
-3. **Staff View Rendering** ✅
-   - Canvas-based staff notation display
-   - Motesart numbers rendered on note heads
-   - Key and time signature displayed
-   - Title from metadata shown
+3. **Motesart Conversion:**
+   - Maps notes to numbers: C=1, D=2, E=3, F=4, G=5, A=6, B=7
+   - Half-numbers for chromatic notes (1½, 2½, 4½, 5½, 6½)
+   - Octave dots: • above for higher octaves, • below for lower octaves
+
+4. **Display Format:**
+   - Motesart numbers on one line with measure bars (|)
+   - Lyrics aligned below (when extracted)
+   - Legend explaining notation
+
+5. **Supported File Types:**
+   - Scanned PDF hymnals
+   - Image uploads (PNG, JPG, JPEG, WebP)
+   - HEIC conversion supported
 
 ## Application Routes
 - `/` - Landing page
