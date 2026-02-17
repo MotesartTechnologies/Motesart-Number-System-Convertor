@@ -1,6 +1,7 @@
 """
 Optical Music Recognition (OMR) Service for Motesart Converter
 Using Google Gemini Vision API for sheet music analysis
+Supports multi-page PDFs with lyrics alignment
 """
 
 import os
@@ -9,7 +10,7 @@ import base64
 import tempfile
 import logging
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -18,9 +19,6 @@ load_dotenv()
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Gemini API Key
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 
 # Note to Motesart number mapping
 NOTE_TO_NUMBER = {
@@ -53,29 +51,14 @@ def get_key_root_semitone(key_name: str) -> int:
 def note_to_motesart(pitch: str, octave: int, key_root: int = 0) -> Dict:
     """
     Convert a note pitch to Motesart number with octave indicators.
-    
-    Args:
-        pitch: Note name (e.g., 'C', 'D#', 'Bb')
-        octave: Octave number (e.g., 4)
-        key_root: Semitone of key root for transposition
-        
-    Returns:
-        Dict with 'number', 'accidental', 'octave_dots' fields
     """
-    # Clean up pitch name
-    pitch = pitch.strip().replace('-', 'b')
-    
-    # Extract base note and accidental
+    pitch = pitch.strip().replace('-', 'b') if pitch else 'C'
     base_note = pitch[0].upper() if pitch else 'C'
     accidental = pitch[1:] if len(pitch) > 1 else ''
     
-    # Get semitone value
     semitone = NOTE_TO_SEMITONE.get(pitch.upper(), NOTE_TO_SEMITONE.get(base_note, 0))
-    
-    # Calculate semitones from key root
     semitones_from_root = (semitone - key_root) % 12
     
-    # Determine the Motesart number
     if semitones_from_root in MAJOR_SCALE_SEMITONES:
         degree = MAJOR_SCALE_SEMITONES.index(semitones_from_root) + 1
         motesart_num = str(degree)
@@ -84,7 +67,6 @@ def note_to_motesart(pitch: str, octave: int, key_root: int = 0) -> Dict:
         motesart_num = HALF_NUMBER_MAP[semitones_from_root]
         accidental_symbol = ''
     else:
-        # Fallback to simple note number
         motesart_num = NOTE_TO_NUMBER.get(base_note, '?')
         if '#' in accidental:
             accidental_symbol = '♯'
@@ -93,7 +75,6 @@ def note_to_motesart(pitch: str, octave: int, key_root: int = 0) -> Dict:
         else:
             accidental_symbol = ''
     
-    # Calculate octave dots (middle octave = 4, reference)
     reference_octave = 4
     octave_diff = (octave or 4) - reference_octave
     
@@ -109,64 +90,102 @@ def note_to_motesart(pitch: str, octave: int, key_root: int = 0) -> Dict:
     }
 
 
-def convert_pdf_to_images(pdf_path: str, dpi: int = 300) -> List[str]:
+def convert_pdf_to_images(pdf_path: str, dpi: int = 300) -> List[Dict]:
     """
-    Convert PDF pages to high-resolution PNG images.
+    Convert ALL PDF pages to high-resolution PNG images.
     
     Args:
         pdf_path: Path to the PDF file
         dpi: Resolution (default 300 DPI for high quality)
         
     Returns:
-        List of paths to generated PNG images
+        List of dicts with 'page_number', 'image_path', 'success'
     """
     try:
         from pdf2image import convert_from_path
         
         logger.info(f"Converting PDF to images at {dpi} DPI: {pdf_path}")
         
-        # Convert PDF to images
+        # Convert ALL pages
         images = convert_from_path(pdf_path, dpi=dpi)
         
-        image_paths = []
+        pages = []
         for i, img in enumerate(images):
-            # Save to temp file
-            temp_path = tempfile.mktemp(suffix=f'_page{i+1}.png')
-            img.save(temp_path, 'PNG')
-            image_paths.append(temp_path)
-            logger.info(f"Saved page {i+1} to {temp_path}")
+            try:
+                temp_path = tempfile.mktemp(suffix=f'_page{i+1}.png')
+                img.save(temp_path, 'PNG')
+                pages.append({
+                    'page_number': i + 1,
+                    'image_path': temp_path,
+                    'success': True,
+                    'error': None
+                })
+                logger.info(f"Saved page {i+1} to {temp_path}")
+            except Exception as e:
+                pages.append({
+                    'page_number': i + 1,
+                    'image_path': None,
+                    'success': False,
+                    'error': str(e)
+                })
+                logger.error(f"Failed to save page {i+1}: {e}")
         
-        return image_paths
+        logger.info(f"Converted {len(pages)} pages from PDF")
+        return pages
         
     except Exception as e:
         logger.error(f"PDF to image conversion failed: {e}")
         return []
 
 
-def image_to_base64(image_path: str) -> str:
-    """Convert image file to base64 string."""
-    with open(image_path, 'rb') as f:
-        return base64.b64encode(f.read()).decode('utf-8')
+def extract_text_from_pdf(pdf_path: str) -> List[Dict]:
+    """
+    Extract selectable text from PDF pages for lyrics fallback.
+    """
+    try:
+        import fitz  # PyMuPDF
+        
+        doc = fitz.open(pdf_path)
+        pages_text = []
+        
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            text = page.get_text()
+            pages_text.append({
+                'page_number': page_num + 1,
+                'text': text,
+                'words': text.split()
+            })
+        
+        doc.close()
+        return pages_text
+        
+    except Exception as e:
+        logger.warning(f"Could not extract text from PDF: {e}")
+        return []
 
 
-async def analyze_sheet_music_with_gemini(image_path: str) -> Dict:
+async def analyze_sheet_music_with_gemini(image_path: str, user_api_key: str = None) -> Dict:
     """
     Send sheet music image to Google Gemini Vision API for analysis.
-    Uses Emergent LLM key for API access.
     
     Args:
         image_path: Path to the image file
+        user_api_key: Optional user-provided Gemini API key
         
     Returns:
         Parsed JSON response with notes, lyrics, key, time signature
     """
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType
+        # Use user's API key if provided, otherwise use Emergent LLM key
+        api_key = user_api_key or os.environ.get('EMERGENT_LLM_KEY')
         
-        api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
-            logger.error("EMERGENT_LLM_KEY not configured")
-            return {'success': False, 'error': 'Emergent LLM key not configured'}
+            return {
+                'success': False,
+                'error': 'No API key configured. Please add your Gemini API key in settings.',
+                'error_type': 'NO_API_KEY'
+            }
         
         logger.info(f"Analyzing sheet music with Gemini: {image_path}")
         
@@ -179,7 +198,9 @@ async def analyze_sheet_music_with_gemini(image_path: str) -> Dict:
             '.webp': 'image/webp'
         }.get(ext, 'image/png')
         
-        # Create chat instance using Emergent integrations
+        # Use emergent integrations
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType
+        
         chat = LlmChat(
             api_key=api_key,
             session_id=f"omr_{os.path.basename(image_path)}",
@@ -188,56 +209,63 @@ Your task is to analyze hymnal sheet music images and extract detailed note info
 You MUST respond with valid JSON only - no markdown, no explanations, just pure JSON."""
         ).with_model("gemini", "gemini-2.5-flash")
         
-        # Create image content
         image_content = FileContentWithMimeType(
             file_path=image_path,
             mime_type=mime_type
         )
         
-        # Create the prompt
-        prompt = """Read this hymnal sheet music image. Extract every single music note (pitch and octave), all lyrics/words aligned to their notes, the key signature, and time signature.
+        # Enhanced prompt for better lyrics extraction
+        prompt = """Read this hymnal sheet music image carefully. Extract:
+1. Every single music note (pitch like C, D, E, F, G, A, B with # or b for sharps/flats)
+2. The octave number for each note (middle C = C4)
+3. ALL lyrics/words - each syllable should be aligned to its corresponding note
+4. The key signature
+5. The time signature
+6. Song title if visible
 
-Return the result as structured JSON with this EXACT format:
+Return structured JSON with this EXACT format:
 {
-    "key_signature": "C major" or detected key,
-    "time_signature": "4/4" or detected time signature,
-    "title": "song title if visible",
+    "key_signature": "C major",
+    "time_signature": "4/4",
+    "title": "Song Title",
     "measures": [
         {
             "number": 1,
             "notes": [
-                {
-                    "pitch": "C",
-                    "octave": 4,
-                    "duration": "quarter",
-                    "lyric": "word or syllable under this note"
-                }
+                {"pitch": "C", "octave": 4, "duration": "quarter", "lyric": "My"},
+                {"pitch": "C", "octave": 4, "duration": "quarter", "lyric": "thanks"},
+                {"pitch": "G", "octave": 4, "duration": "quarter", "lyric": "to"},
+                {"pitch": "G", "octave": 4, "duration": "quarter", "lyric": "Him"}
             ]
         }
     ]
 }
 
-IMPORTANT:
-1. Extract EVERY note you can see on the staff
-2. For each note, include the pitch (C, D, E, F, G, A, B with # or b if sharped/flatted)
-3. Include the octave number (middle C = C4)
-4. Align lyrics to the notes they belong to
-5. Group notes by measure
-6. Return ONLY valid JSON, no other text"""
+CRITICAL INSTRUCTIONS:
+1. Extract EVERY note visible on the staff - do not skip any
+2. For EACH note, include the lyric syllable directly below it
+3. If a note has no lyric, use null for lyric
+4. If a note is held (no new syllable), use "-" for lyric
+5. Group notes by measure (separated by bar lines)
+6. Return ONLY valid JSON"""
 
-        # Send message with image
-        message = UserMessage(
-            text=prompt,
-            file_contents=[image_content]
-        )
+        message = UserMessage(text=prompt, file_contents=[image_content])
         
-        response = await chat.send_message(message)
-        
-        logger.info(f"Gemini response length: {len(response)}")
+        try:
+            response = await chat.send_message(message)
+            logger.info(f"Gemini response length: {len(response)}")
+        except Exception as e:
+            error_str = str(e)
+            if '429' in error_str or 'quota' in error_str.lower():
+                return {
+                    'success': False,
+                    'error': 'API credits exhausted. Please try again later or add your own Gemini API key.',
+                    'error_type': 'QUOTA_EXCEEDED'
+                }
+            raise
         
         # Parse JSON from response
         try:
-            # Try to extract JSON from the response
             json_match = re.search(r'\{[\s\S]*\}', response)
             if json_match:
                 data = json.loads(json_match.group())
@@ -248,29 +276,36 @@ IMPORTANT:
             data['analysis_method'] = 'gemini-2.5-flash'
             
             logger.info(f"Extracted {len(data.get('measures', []))} measures")
-            
             return data
             
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse Gemini response as JSON: {e}")
-            logger.error(f"Response was: {response[:500]}")
+            logger.error(f"Failed to parse Gemini response: {e}")
             return {
                 'success': False,
-                'error': f'Invalid JSON response: {str(e)}',
-                'raw_response': response[:1000]
+                'error': f'Could not parse music data from image. Try uploading a higher quality scan.',
+                'error_type': 'PARSE_ERROR',
+                'raw_response': response[:500]
             }
             
     except Exception as e:
         logger.error(f"Gemini analysis failed: {e}")
-        import traceback
-        traceback.print_exc()
+        error_str = str(e)
+        
+        if '429' in error_str or 'quota' in error_str.lower():
+            return {
+                'success': False,
+                'error': 'API credits exhausted. Please try again later.',
+                'error_type': 'QUOTA_EXCEEDED'
+            }
+        
         return {
             'success': False,
-            'error': str(e)
+            'error': f'Could not read this page. Try uploading a higher quality scan.',
+            'error_type': 'ANALYSIS_ERROR'
         }
 
 
-def analyze_sheet_music_with_gemini_sync(image_path: str) -> Dict:
+def analyze_sheet_music_with_gemini_sync(image_path: str, user_api_key: str = None) -> Dict:
     """Synchronous wrapper for Gemini analysis."""
     import asyncio
     import nest_asyncio
@@ -282,29 +317,20 @@ def analyze_sheet_music_with_gemini_sync(image_path: str) -> Dict:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     
-    return loop.run_until_complete(analyze_sheet_music_with_gemini(image_path))
+    return loop.run_until_complete(analyze_sheet_music_with_gemini(image_path, user_api_key))
 
 
 def convert_to_motesart_format(gemini_data: Dict, key_override: str = None) -> Dict:
     """
-    Convert Gemini output to Motesart format with numbers and aligned lyrics.
-    
-    Args:
-        gemini_data: Parsed response from Gemini
-        key_override: Optional key to use instead of detected key
-        
-    Returns:
-        Formatted data for display
+    Convert Gemini output to Motesart format with aligned lyrics.
     """
     if not gemini_data.get('success'):
         return gemini_data
     
-    # Get key signature
     key_sig = key_override or gemini_data.get('key_signature', 'C major')
     key_name = key_sig.replace(' major', '').replace(' minor', '').strip()
     key_root = get_key_root_semitone(key_name)
     
-    # Process each measure
     formatted_measures = []
     all_notes = []
     all_lyrics = []
@@ -316,10 +342,25 @@ def convert_to_motesart_format(gemini_data: Dict, key_override: str = None) -> D
         for note in measure.get('notes', []):
             pitch = note.get('pitch', 'C')
             octave = note.get('octave', 4)
-            lyric = note.get('lyric', '')
+            lyric = note.get('lyric') or ''
             duration = note.get('duration', 'quarter')
             
-            # Convert to Motesart
+            # Handle rest notes
+            if pitch.lower() == 'rest' or not pitch:
+                measure_notes.append({
+                    'pitch': 'rest',
+                    'octave': None,
+                    'motesart': '-',
+                    'number': '-',
+                    'accidental': '',
+                    'dots_above': '',
+                    'dots_below': '',
+                    'duration': duration,
+                    'lyric': lyric
+                })
+                measure_lyrics.append(lyric or '-')
+                continue
+            
             motesart = note_to_motesart(pitch, octave, key_root)
             
             measure_notes.append({
@@ -334,7 +375,7 @@ def convert_to_motesart_format(gemini_data: Dict, key_override: str = None) -> D
                 'lyric': lyric
             })
             
-            measure_lyrics.append(lyric or '')
+            measure_lyrics.append(lyric or '-')
         
         formatted_measures.append({
             'number': measure.get('number', len(formatted_measures) + 1),
@@ -345,23 +386,37 @@ def convert_to_motesart_format(gemini_data: Dict, key_override: str = None) -> D
         all_notes.extend(measure_notes)
         all_lyrics.extend(measure_lyrics)
     
-    # Create display lines (numbers on top, lyrics below)
-    number_line = ''
-    lyric_line = ''
+    # Create aligned display lines
+    number_lines = []
+    lyric_lines = []
     
-    for i, measure in enumerate(formatted_measures):
-        if i > 0:
-            number_line += ' | '
-            lyric_line += ' | '
-        
+    current_number_line = '|'
+    current_lyric_line = '|'
+    
+    for measure in formatted_measures:
         for note in measure['notes']:
             display = note['motesart']
             lyric = note['lyric'] or '-'
             
-            # Pad to align
-            max_len = max(len(display), len(lyric))
-            number_line += display.center(max_len + 1)
-            lyric_line += lyric.center(max_len + 1)
+            # Pad to align - use the longer of the two
+            max_len = max(len(display), len(lyric), 3)
+            current_number_line += f" {display.center(max_len)}"
+            current_lyric_line += f" {lyric.center(max_len)}"
+        
+        current_number_line += ' |'
+        current_lyric_line += ' |'
+        
+        # Start new line after 4 measures
+        if len(current_number_line) > 60:
+            number_lines.append(current_number_line)
+            lyric_lines.append(current_lyric_line)
+            current_number_line = '|'
+            current_lyric_line = '|'
+    
+    # Add remaining content
+    if current_number_line != '|':
+        number_lines.append(current_number_line)
+        lyric_lines.append(current_lyric_line)
     
     return {
         'success': True,
@@ -374,58 +429,72 @@ def convert_to_motesart_format(gemini_data: Dict, key_override: str = None) -> D
         'all_notes': all_notes,
         'all_lyrics': all_lyrics,
         'display': {
-            'number_line': number_line.strip(),
-            'lyric_line': lyric_line.strip()
+            'number_lines': number_lines,
+            'lyric_lines': lyric_lines,
+            'combined': list(zip(number_lines, lyric_lines))
         },
-        'analysis_method': gemini_data.get('analysis_method', 'gemini-2.0-flash')
+        'analysis_method': gemini_data.get('analysis_method', 'gemini-2.5-flash')
     }
 
 
-def process_sheet_music_omr(file_path: str, key_override: str = None) -> Dict:
+def process_sheet_music_omr(file_path: str, key_override: str = None, user_api_key: str = None) -> Dict:
     """
-    Main OMR processing function using Google Gemini Vision API.
-    
-    Args:
-        file_path: Path to PDF or image file
-        key_override: Optional key to use for conversion
-        
-    Returns:
-        Processed Motesart data
+    Main OMR processing function with MULTI-PAGE PDF support.
     """
-    logger.info(f"Starting OMR processing with Gemini: {file_path}")
+    logger.info(f"Starting OMR processing: {file_path}")
     
     result = {
         'success': False,
         'error': None,
+        'error_type': None,
         'key_signature': None,
         'key_name': None,
         'time_signature': '4/4',
+        'title': None,
+        'pages': [],
         'measures': [],
         'all_notes': [],
         'all_lyrics': [],
         'display': None,
         'analysis_method': None,
+        'total_pages': 0,
+        'successful_pages': 0,
+        'failed_pages': []
     }
     
     try:
         file_ext = os.path.splitext(file_path)[1].lower()
         temp_images = []
-        image_path = file_path
+        pages_to_process = []
         
-        # Convert PDF to images
+        # Convert PDF to images (ALL pages)
         if file_ext == '.pdf':
-            logger.info("Converting PDF to high-resolution images...")
-            image_paths = convert_pdf_to_images(file_path, dpi=300)
+            logger.info("Converting multi-page PDF...")
+            pdf_pages = convert_pdf_to_images(file_path, dpi=300)
             
-            if not image_paths:
+            if not pdf_pages:
                 result['error'] = "Failed to convert PDF to images"
+                result['error_type'] = 'PDF_CONVERSION_ERROR'
                 return result
             
-            # Process first page (can extend to multiple pages)
-            image_path = image_paths[0]
-            temp_images = image_paths
-        
-        # Handle HEIC conversion
+            result['total_pages'] = len(pdf_pages)
+            pages_to_process = pdf_pages
+            temp_images = [p['image_path'] for p in pdf_pages if p['image_path']]
+            
+            # Also try to extract text for lyrics fallback
+            pdf_text = extract_text_from_pdf(file_path)
+            
+        # Handle single image
+        elif file_ext in ['.png', '.jpg', '.jpeg', '.webp']:
+            pages_to_process = [{
+                'page_number': 1,
+                'image_path': file_path,
+                'success': True,
+                'error': None
+            }]
+            result['total_pages'] = 1
+            
+        # Handle HEIC
         elif file_ext in ['.heic', '.heif']:
             try:
                 from PIL import Image
@@ -435,34 +504,156 @@ def process_sheet_music_omr(file_path: str, key_override: str = None) -> Dict:
                 heic_img = Image.open(file_path)
                 temp_png = tempfile.mktemp(suffix='.png')
                 heic_img.save(temp_png, 'PNG')
-                image_path = temp_png
+                pages_to_process = [{
+                    'page_number': 1,
+                    'image_path': temp_png,
+                    'success': True,
+                    'error': None
+                }]
                 temp_images.append(temp_png)
+                result['total_pages'] = 1
             except Exception as e:
                 result['error'] = f"Could not convert HEIC: {e}"
+                result['error_type'] = 'HEIC_CONVERSION_ERROR'
                 return result
-        
-        # Ensure it's an image format Gemini accepts
-        if file_ext not in ['.png', '.jpg', '.jpeg', '.webp', '.pdf', '.heic', '.heif']:
+        else:
             result['error'] = f"Unsupported file format: {file_ext}"
+            result['error_type'] = 'UNSUPPORTED_FORMAT'
             return result
         
-        # Analyze with Gemini
-        logger.info(f"Sending image to Gemini Vision API: {image_path}")
-        gemini_result = analyze_sheet_music_with_gemini_sync(image_path)
+        # Process EACH page with Gemini
+        all_measures = []
+        all_notes_combined = []
+        all_lyrics_combined = []
+        page_results = []
         
-        if gemini_result.get('success'):
-            # Convert to Motesart format
-            motesart_result = convert_to_motesart_format(gemini_result, key_override)
-            result.update(motesart_result)
-        else:
-            result['error'] = gemini_result.get('error', 'Gemini analysis failed')
-            if gemini_result.get('raw_response'):
-                result['raw_response'] = gemini_result['raw_response']
+        for page_info in pages_to_process:
+            page_num = page_info['page_number']
+            
+            if not page_info['success'] or not page_info['image_path']:
+                page_results.append({
+                    'page_number': page_num,
+                    'success': False,
+                    'error': page_info.get('error', 'Page conversion failed'),
+                    'measures': [],
+                    'notes': []
+                })
+                result['failed_pages'].append(page_num)
+                continue
+            
+            logger.info(f"Processing page {page_num}/{result['total_pages']}...")
+            
+            # Analyze with Gemini
+            gemini_result = analyze_sheet_music_with_gemini_sync(
+                page_info['image_path'],
+                user_api_key
+            )
+            
+            if gemini_result.get('success'):
+                # Convert to Motesart format
+                motesart_result = convert_to_motesart_format(gemini_result, key_override)
+                
+                if motesart_result.get('success'):
+                    # Get key and time from first successful page
+                    if not result['key_signature']:
+                        result['key_signature'] = motesart_result.get('key_signature')
+                        result['key_name'] = motesart_result.get('key_name')
+                        result['time_signature'] = motesart_result.get('time_signature')
+                        result['title'] = motesart_result.get('title')
+                    
+                    page_measures = motesart_result.get('measures', [])
+                    page_notes = motesart_result.get('all_notes', [])
+                    page_lyrics = motesart_result.get('all_lyrics', [])
+                    
+                    page_results.append({
+                        'page_number': page_num,
+                        'success': True,
+                        'measures': page_measures,
+                        'notes': page_notes,
+                        'lyrics': page_lyrics,
+                        'display': motesart_result.get('display'),
+                        'image_path': page_info['image_path']
+                    })
+                    
+                    all_measures.extend(page_measures)
+                    all_notes_combined.extend(page_notes)
+                    all_lyrics_combined.extend(page_lyrics)
+                    result['successful_pages'] += 1
+                else:
+                    page_results.append({
+                        'page_number': page_num,
+                        'success': False,
+                        'error': motesart_result.get('error', 'Conversion failed'),
+                        'measures': [],
+                        'notes': []
+                    })
+                    result['failed_pages'].append(page_num)
+            else:
+                page_results.append({
+                    'page_number': page_num,
+                    'success': False,
+                    'error': gemini_result.get('error', f'Could not read page {page_num}'),
+                    'error_type': gemini_result.get('error_type'),
+                    'measures': [],
+                    'notes': []
+                })
+                result['failed_pages'].append(page_num)
+                
+                # Check if quota exceeded - stop processing more pages
+                if gemini_result.get('error_type') == 'QUOTA_EXCEEDED':
+                    result['error'] = gemini_result.get('error')
+                    result['error_type'] = 'QUOTA_EXCEEDED'
+                    break
+        
+        # Combine all page results
+        result['pages'] = page_results
+        result['measures'] = all_measures
+        result['all_notes'] = all_notes_combined
+        result['all_lyrics'] = all_lyrics_combined
+        
+        # Create combined display
+        if all_measures:
+            result['success'] = True
+            result['analysis_method'] = 'gemini-2.5-flash'
+            
+            # Rebuild display from all measures
+            number_lines = []
+            lyric_lines = []
+            current_number = '|'
+            current_lyric = '|'
+            
+            for i, measure in enumerate(all_measures):
+                for note in measure.get('notes', []):
+                    display = note.get('motesart', '-')
+                    lyric = note.get('lyric') or '-'
+                    max_len = max(len(display), len(lyric), 3)
+                    current_number += f" {display.center(max_len)}"
+                    current_lyric += f" {lyric.center(max_len)}"
+                
+                current_number += ' |'
+                current_lyric += ' |'
+                
+                # New line every 4 measures
+                if (i + 1) % 4 == 0:
+                    number_lines.append(current_number)
+                    lyric_lines.append(current_lyric)
+                    current_number = '|'
+                    current_lyric = '|'
+            
+            if current_number != '|':
+                number_lines.append(current_number)
+                lyric_lines.append(current_lyric)
+            
+            result['display'] = {
+                'number_lines': number_lines,
+                'lyric_lines': lyric_lines,
+                'combined': list(zip(number_lines, lyric_lines))
+            }
         
         # Clean up temp files
         for temp_path in temp_images:
             try:
-                if os.path.exists(temp_path):
+                if temp_path and os.path.exists(temp_path):
                     os.remove(temp_path)
             except:
                 pass
@@ -474,6 +665,7 @@ def process_sheet_music_omr(file_path: str, key_override: str = None) -> Dict:
         import traceback
         traceback.print_exc()
         result['error'] = str(e)
+        result['error_type'] = 'PROCESSING_ERROR'
         return result
 
 
@@ -484,17 +676,10 @@ def extract_notes_for_staff_view(omr_data: Dict) -> List[Dict]:
     
     notes = omr_data.get('all_notes', [])
     if not notes:
-        # Try to extract from measures
         for measure in omr_data.get('measures', []):
             notes.extend(measure.get('notes', []))
     
     return notes
-
-
-def get_key_root_semitone(key_name: str) -> int:
-    """Get the semitone value for a key root."""
-    key_clean = key_name.replace('-flat', 'b').replace('-sharp', '#').replace(' major', '').replace(' minor', '').strip()
-    return NOTE_TO_SEMITONE.get(key_clean, 0)
 
 
 def pitch_to_motesart(pitch: str, key_root: int) -> str:
@@ -502,10 +687,8 @@ def pitch_to_motesart(pitch: str, key_root: int) -> str:
     if not pitch:
         return "?"
     
-    # Extract note name
     match = re.match(r'^([A-Ga-g][#b]?)(-?\d)?$', pitch)
     if not match:
-        # Try just the note name
         note_name = pitch[0].upper() if pitch else 'C'
     else:
         note_name = match.group(1).capitalize()
