@@ -28,6 +28,7 @@ export function MotesartPreview({
   omrNotes = [],
   omrMeasures = [],
   omrLyrics = [],
+  omrDisplay = null,
   onExport,
   onOMRProcessed,
   onShowOriginal,
