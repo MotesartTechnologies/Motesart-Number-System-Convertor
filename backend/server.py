@@ -441,6 +441,59 @@ async def update_profile(req: UpdateProfileRequest, user: User = Depends(get_cur
     user_doc["display_name"] = get_display_name(user_doc)
     return user_doc
 
+class UpdateApiKeyRequest(BaseModel):
+    gemini_api_key: Optional[str] = None
+
+@api_router.put("/auth/api-keys")
+async def update_api_keys(req: UpdateApiKeyRequest, user: User = Depends(get_current_user)):
+    """Update user's API keys for Gemini/other services"""
+    update_data = {}
+    
+    if req.gemini_api_key is not None:
+        if req.gemini_api_key == "":
+            # Remove the key
+            await db.users.update_one(
+                {"user_id": user.user_id},
+                {"$unset": {"gemini_api_key": ""}}
+            )
+        else:
+            update_data["gemini_api_key"] = req.gemini_api_key
+    
+    if update_data:
+        await db.users.update_one(
+            {"user_id": user.user_id},
+            {"$set": update_data}
+        )
+    
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0, "password_hash": 0})
+    
+    # Mask the API key for response
+    if user_doc.get("gemini_api_key"):
+        key = user_doc["gemini_api_key"]
+        user_doc["gemini_api_key_masked"] = f"{key[:10]}...{key[-4:]}" if len(key) > 14 else "****"
+        del user_doc["gemini_api_key"]
+    else:
+        user_doc["gemini_api_key_masked"] = None
+    
+    return {"success": True, "has_gemini_key": user_doc.get("gemini_api_key_masked") is not None}
+
+@api_router.get("/auth/api-keys")
+async def get_api_keys(user: User = Depends(get_current_user)):
+    """Get user's API key status (masked)"""
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0})
+    
+    has_key = bool(user_doc.get("gemini_api_key"))
+    masked_key = None
+    
+    if has_key:
+        key = user_doc["gemini_api_key"]
+        masked_key = f"{key[:10]}...{key[-4:]}" if len(key) > 14 else "****"
+    
+    return {
+        "has_gemini_key": has_key,
+        "gemini_api_key_masked": masked_key
+    }
+
 @api_router.post("/auth/avatar")
 async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_current_user)):
     """Upload a custom avatar image"""
