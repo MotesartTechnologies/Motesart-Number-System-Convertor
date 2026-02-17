@@ -809,23 +809,66 @@ export default function Dashboard({ user }) {
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center h-[450px] text-center px-6">
-                  <AlertCircle className="w-12 h-12 text-yellow-500/50 mb-4" />
-                  <p className="text-slate-300 font-medium mb-2">No Chords Detected</p>
+                  <RefreshCw className="w-12 h-12 text-amber-500/50 mb-4" />
+                  <p className="text-slate-300 font-medium mb-2">Ready to Process</p>
                   <p className="text-sm text-slate-500 max-w-md mb-4">
-                    Could not automatically detect chords from this file. You can:
+                    Click the button below to extract notes and lyrics from this sheet music using Gemini AI.
                   </p>
-                  <div className="text-left text-sm text-slate-400 space-y-2 mb-6">
-                    <p>1. Try uploading a higher resolution image</p>
-                    <p>2. Use Manual Entry to type chord symbols (G, Am, D7)</p>
-                    <p>3. Use the Text Converter tab for full chord charts</p>
-                  </div>
                   <Button 
-                    onClick={() => setShowManualEntry(true)}
-                    className="bg-neon-indigo hover:bg-indigo-500"
+                    onClick={async () => {
+                      console.log("Step 1: Starting OMR processing for", selectedConversion?.filename);
+                      try {
+                        setSelectedConversion(prev => ({...prev, status: "processing_omr"}));
+                        
+                        console.log("Step 2: Calling OMR API");
+                        const response = await axios.post(
+                          `${BACKEND_URL}/api/conversions/${selectedConversion?.conversion_id}/omr`,
+                          {},
+                          { withCredentials: true }
+                        );
+                        
+                        console.log("Step 3: OMR response received", response.data);
+                        
+                        if (response.data.omr_success) {
+                          console.log("Step 4: OMR successful, notes:", response.data.omr_notes?.length);
+                          setSelectedConversion(prev => ({
+                            ...prev,
+                            ...response.data,
+                          }));
+                          toast.success(`Extracted ${response.data.omr_notes?.length || 0} notes!`);
+                        } else {
+                          console.log("Step 4: OMR failed", response.data.omr_error);
+                          setSelectedConversion(prev => ({
+                            ...prev,
+                            status: "uploaded",
+                            omr_error: response.data.omr_error
+                          }));
+                          toast.error(response.data.omr_error || "Processing failed. Try a clearer image.");
+                        }
+                      } catch (err) {
+                        console.error("OMR processing error:", err);
+                        setSelectedConversion(prev => ({...prev, status: "uploaded"}));
+                        toast.error("Processing failed. Try a clearer image.");
+                      }
+                    }}
+                    className="bg-amber-600 hover:bg-amber-500 text-white"
+                    disabled={selectedConversion?.status === "processing_omr"}
                   >
-                    <Edit3 className="w-4 h-4 mr-2" />
-                    Open Manual Entry
+                    {selectedConversion?.status === "processing_omr" ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing with Gemini AI...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Process with Gemini AI
+                      </>
+                    )}
                   </Button>
+                  <p className="text-xs text-slate-600 mt-3">
+                    Extracts notes, lyrics, key signature from scanned sheet music
+                  </p>
                 </div>
               )}
             </CardContent>
