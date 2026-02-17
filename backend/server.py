@@ -1821,41 +1821,77 @@ async def upload_file(file: UploadFile = File(...), user: User = Depends(get_cur
     # Process the file
     try:
         if is_sheet_music:
-            # Try to extract chords from PDF/images
-            if original_extension == "pdf":
-                extraction_result = await extract_text_from_pdf(content, filename)
-            else:
-                extraction_result = await extract_text_from_image(content, filename)
+            # For sheet music (PDF/images): auto-trigger Gemini OMR processing
+            logger.info(f"Step 1: File uploaded - {filename}, triggering Gemini OMR")
             
-            if extraction_result.get("success"):
-                # Successfully extracted chords
+            # Set status to processing
+            await db.conversions.update_one(
+                {"conversion_id": conversion_id},
+                {"$set": {
+                    "status": "processing_omr",
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            
+            # Run Gemini OMR processing
+            logger.info(f"Step 2: Calling Gemini Vision API for {conversion_id}")
+            
+            # Get user's API key if available
+            user_doc = await db.users.find_one({"user_id": user.user_id})
+            user_api_key = user_doc.get("gemini_api_key") if user_doc else None
+            
+            omr_result = process_sheet_music_omr(str(file_path), user_api_key=user_api_key)
+            
+            logger.info(f"Step 3: Gemini response received for {conversion_id}")
+            
+            if omr_result.get("success"):
+                # Extract notes for display
+                staff_notes = extract_notes_for_staff_view(omr_result)
+                key_name = omr_result.get("key_name", "C")
+                
+                logger.info(f"Step 4: OMR successful - {len(staff_notes)} notes extracted")
+                
                 await db.conversions.update_one(
                     {"conversion_id": conversion_id},
                     {"$set": {
                         "status": "completed",
-                        "key_signature": extraction_result["key_signature"],
-                        "key_name": extraction_result.get("key_name", "C"),
-                        "key_root": extraction_result.get("key_root", 0),
-                        "chords": extraction_result["chords"],
-                        "sections": extraction_result["sections"],
-                        "content_type": "chord_chart",
-                        "time_signature": "4/4",
-                        "tempo": 120,
-                        "extraction_method": extraction_result.get("method", "ocr"),
-                        "raw_text": extraction_result.get("raw_text", ""),
+                        "omr_processed": True,
+                        "omr_success": True,
+                        "key_signature": f"1 = {key_name}",
+                        "key_name": key_name,
+                        "key_root": get_key_root_semitone(key_name),
+                        "time_signature": omr_result.get("time_signature", "4/4"),
+                        "title": omr_result.get("title") or filename.split(".")[0],
+                        "omr_notes": staff_notes,
+                        "omr_measures": omr_result.get("measures", []),
+                        "omr_lyrics": omr_result.get("all_lyrics", []),
+                        "omr_display": omr_result.get("display"),
+                        "omr_pages": omr_result.get("pages", []),
+                        "total_pages": omr_result.get("total_pages", 1),
+                        "successful_pages": omr_result.get("successful_pages", 1),
+                        "failed_pages": omr_result.get("failed_pages", []),
+                        "content_type": "traditional",
+                        "analysis_method": omr_result.get("analysis_method", "gemini-2.5-flash"),
+                        "chords": [],  # Clear old chord data
+                        "sections": [],  # Clear old section data
                         "updated_at": datetime.now(timezone.utc).isoformat()
                     }}
                 )
+                
+                logger.info(f"Step 5: Motesart conversion complete for {conversion_id}")
             else:
-                # Could not extract chords - mark as uploaded for manual/Phase 2 OMR
+                # OMR failed - still keep file for manual retry
+                logger.warning(f"Step 4: OMR failed for {conversion_id}: {omr_result.get('error')}")
                 await db.conversions.update_one(
                     {"conversion_id": conversion_id},
                     {"$set": {
                         "status": "uploaded",
-                        "status_message": extraction_result.get("error", "Could not detect chords. Try the Text Converter for manual input."),
+                        "omr_processed": True,
+                        "omr_success": False,
+                        "omr_error": omr_result.get("error", "Processing failed. Try a clearer image."),
+                        "error_type": omr_result.get("error_type"),
                         "key_signature": "1 = C",
                         "time_signature": "4/4",
-                        "tempo": 120,
                         "chords": [],
                         "sections": [],
                         "updated_at": datetime.now(timezone.utc).isoformat()
